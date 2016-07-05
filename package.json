@@ -1,0 +1,13 @@
+{
+  "name": "chrome-background-link",
+  "version": "",
+  "author": "Dylan Owen <dyltotheo@gmail.com>",
+  "description": "Chrome background link for extensions",
+  "devDependencies": {
+    "del": "^2.2.1",
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^2.13.6",
+    "gulp-watch": "^4.3.5",
+    "run-sequence": "^1.2.2"
+  }
+}
