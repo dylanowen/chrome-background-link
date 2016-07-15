@@ -1,3 +1,9 @@
+/// <reference path="../global/ProxyStub.ts"/>
+
+
+//TODO https://github.com/Microsoft/TypeScript/issues/2829
+
+
 /* <reference path="./ConnectionHandler.ts"/>
 
 /

@@ -3,54 +3,11 @@
     <head>
         <title>Test</title>
         <meta charset="utf-8">
+        <script src="lib/cbl-client.js"></script>
         <script src="js/main.js"></script>
-        <link rel="stylesheet" type="text/css" href="css/main.css" />
-        <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
     </head>
-    <iframe src="sandbox.html" style="display:none" id="sandbox"></iframe>
-    <body><div id="wrapper">
-        <h3>Code</h3>
-        <pre>
-function(requestUrl: string): () => Iterable<{method?: string, requestUrl: string,data?: any}> {
-        </pre>
-        <pre id="code" class="editor">
-var total = 1000;
-var limit = 100;
+    <body>
+        <div id="diviest"></div>
 
-var readData = function*() {
-    for (var i = 0; i < total; i += limit) {
-        yield {
-            method: 'GET',
-            url: baseUrl + '?limit=' + limit + '&offset=' + i
-        };
-    }
-};
-
-return function*() {
-    for (var i = 0; i < total; i++) {
-        yield {
-            method: 'POST',
-            url: baseUrl,
-            data: {
-                testAmount: 100.1,
-                name: 'test name',
-                boolean: false
-            }
-        };
-    }
-
-    yield* readData();
-};
-        </pre>
-        <pre>
-}
-        </pre>
-        <div style="clear: both; margin: 1%">
-            <h3>Base Urls</h3>   <textarea id="baseUrls" style="width:100%" rows="3"></textarea><br />
-            <h3>Name</h3>       <input type="text" id="name" /> <h3>Threads</h3><input type="number" id="threads" value="1"/><br /><br />
-            <button id="createTest">Create Test</button>
-        </div>
-        <div id="tests"></div>
-        <!--<textarea id="output" rows="20" cols="200"></textarea>-->
-    </div><div class="scrollPastEnd"></div></body>
+    </body>
 </html>
