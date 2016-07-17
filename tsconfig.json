@@ -5,5 +5,11 @@
         "declaration": true,
         "removeComments": true,
         "preserveConstEnums": true
-    }
+    },
+    "exclude": [
+        "node_modules",
+        "build",
+        "src",
+        "test"
+    ]
 }

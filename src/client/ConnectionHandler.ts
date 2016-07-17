@@ -1,4 +1,4 @@
-/// <reference path="../types/chrome/chrome.d.ts"/>
+/// <reference path="../external_types/chrome/chrome.d.ts"/>
 /// <reference path="../types/ConnectionHandler.d.ts"/>
 
 /// <reference path="../global/ProxyStub.ts"/>

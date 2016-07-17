@@ -5,7 +5,9 @@
   "description": "Chrome background link for extensions",
   "devDependencies": {
     "del": "^2.2.1",
+    "dts-generator": "https://github.com/dylanowen/dts-generator.git#publish",
     "gulp": "^3.9.1",
+    "gulp-regex-replace": "^0.2.3",
     "gulp-typescript": "^2.13.6",
     "gulp-watch": "^4.3.5",
     "merge2": "^1.0.2",
