@@ -1,93 +1,108 @@
 /// <reference path="../external_types/chrome/chrome.d.ts"/>
-/// <reference path="../types/ConnectionHandler.d.ts"/>
 
+/// <reference path="../global/Message.ts"/>
 /// <reference path="../global/ProxyStub.ts"/>
 
 
-class ConnectionHandler {
-    private extensionId: string;
-    private port: chrome.runtime.Port = null;
-    private portId: number;
-    private messageIdIncrementer: number = 1;
+namespace CBL {
+    export class ClientConnectionHandler {
+        private extensionId: string;
+        private port: chrome.runtime.Port = null;
+        private clientId: number;
+        private messageIdIncrementer: number = 1;
 
-    version: string;
+        version: string;
 
-    constructor(extensionId: string, callback: (success: boolean) => void) {
-        this.extensionId = extensionId;
-        
-        //setup the callback to use the promise
-        this.reconnect().then(() => callback(true)).catch(() => callback(false));
-    }
-
-    reconnect(): Promise<void> {
-        this.disconnect();
-
-        return new Promise<void>((resolve, reject) => {
-            //verify that we can reach the background process
-            let receivedStatus = false;
-            setTimeout(() => {
-                if (!receivedStatus) {
-                    const errorMessage = 'Catastrophic Conection Error: could not reach the background process';
-
-                    reject(errorMessage);
-                    console.error(errorMessage);
-                }
-            }, 1000);
-
-            this.port = chrome.runtime.connect(this.extensionId);
-
-            const initialListener = (message: string): void => {
-                //clear out the listener
-                this.port.onMessage.removeListener(initialListener);
-
-                //let the script know the background connection is working
-                receivedStatus = true;
-
-                try {
-                    const {portId, version} = <Message.Initial>JSON.parse(message);
-                    this.portId = portId;
-                    this.version = version;
-
-                    //bind the main message listener
-                    this.port.onMessage.addListener(this.messageListener);
-
-                    console.log('Versions ' + this.version + '\n Opened a connection on port ' + this.port);
-
-                    resolve();
-                }
-                catch (e) {
-                    const errorMessage = e.message;
-
-                    reject(errorMessage);
-                    console.error(errorMessage);
-                }
-                /*
-            #send all the queued messages
-            for obj in @_messageQueue
-                @sendMessage(obj.message, obj.callback)
-            @_messageQueue = []
-
-            callback(true)
-                */
-            }
-
-            this.port.onMessage.addListener(initialListener);
-        });
-    }
-
-    disconnect(): void {
-        if (this.port !== null) {
-            this.port.disconnect();
+        constructor(extensionId: string, callback: (success: boolean) => void = () => {}) {
+            this.extensionId = extensionId;
+            
+            //setup the callback to use the promise
+            this.reconnect().then(callback.bind(null, true)).catch(callback.bind(null, false));
         }
 
-        //@_messageQueue = []
-        //@_messageCallbacks = {}
-        this.port = null;
-        this.portId = -1;
-    }
+        reconnect(): Promise<void> {
+            this.disconnect();
 
-    private messageListener(message: string): void {
-        console.log(this);
+            return new Promise<void>((resolve, reject) => {
+                //verify that we can reach the background process
+                let receivedStatus = false;
+                setTimeout(() => {
+                    if (!receivedStatus) {
+                        const errorMessage = 'Catastrophic Conection Error: could not reach the background process';
+
+                        reject(errorMessage);
+                        debug.error(errorMessage);
+                    }
+                }, 1000);
+
+                this.port = chrome.runtime.connect(this.extensionId);
+
+                const initialListener = (message: string): void => {
+                    //clear out the listener
+                    this.port.onMessage.removeListener(initialListener);
+
+                    //let the script know the background connection is working
+                    receivedStatus = true;
+
+                    try {
+                        const {clientId, version, proxies} = <InitialMessage>JSON.parse(message);
+                        this.clientId = clientId;
+                        this.version = version;
+
+                        console.log(proxies);
+
+                        //bind the main message listener
+                        this.port.onMessage.addListener(this.messageListener.bind(this));
+
+                        debug.log('Opened a connection\n Version ' + this.version + '\n Client Id: ' + this.clientId);
+
+                        resolve();
+                    }
+                    catch (e) {
+                        const errorMessage = e.message;
+
+                        reject(errorMessage);
+                        debug.error(errorMessage);
+                    }
+                    /*
+                #send all the queued messages
+                for obj in @_messageQueue
+                    @sendMessage(obj.message, obj.callback)
+                @_messageQueue = []
+
+                callback(true)
+                    */
+                }
+
+                this.port.onMessage.addListener(initialListener);
+            });
+        }
+
+        disconnect(): void {
+            if (this.port !== null) {
+                this.port.disconnect();
+            }
+
+            //@_messageQueue = []
+            //@_messageCallbacks = {}
+            this.port = null;
+            this.clientId = -1;
+        }
+
+        private messageListener(rawResponse: string): void {
+            try {
+                let response: ResponseMessage = JSON.parse(rawResponse);
+
+                console.log(response);
+            }
+            catch (e) {
+                debug.error('Failed to parse the message: ' + rawResponse, e);
+            }
+
+
+
+            //return this.connectionHandler.handleMessage(request);
+        }
     }
 }
 

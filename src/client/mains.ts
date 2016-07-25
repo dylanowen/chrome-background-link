@@ -1,3 +1,4 @@
+/// <reference path="../global/Debug.ts"/>
 /// <reference path="../global/ProxyStub.ts"/>
 
 

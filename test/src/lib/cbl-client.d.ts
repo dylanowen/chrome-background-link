@@ -1,76 +1,78 @@
-declare namespace Message {
-    interface Base {
-        id: number
+declare namespace CBL {
+    interface Message {
     }
-
-    export interface Initial {
-        portId: number;
+    interface InitialMessage extends Message {
+        clientId: number;
         version: string;
+        proxies: ProxyCreate[];
     }
-
-    export enum RequestType {
-        PROXY_INVOKE
+    function InitialMessage(clientId: number, proxies: ProxyCreate[]): InitialMessage;
+    enum RequestType {
+        PROXY_INVOKE = 0,
     }
-
-    export interface Request extends Base {
-        type: RequestType
+    interface RequestMessage extends Message {
+        id: number;
+        type: number;
     }
-
-    export enum ReponseType {
-        INVALID_REQUEST,
-        RESPONSE,
-        PROXY_CREATE,
-        PROXY_UPDATE,
-        PROXY_DELETE
+    enum ResponseType {
+        INVALID_REQUEST = 0,
+        RESPONSE = 1,
+        PROXY_CREATE = 2,
+        PROXY_UPDATE = 3,
+        PROXY_DELETE = 4,
     }
-
-    export interface Response extends Base {
-        type: ReponseType;
+    interface ResponseMessage extends Message {
+        id?: number;
+        type: ResponseType;
         data: Object;
     }
-
-
     interface ProxyDelta {
-        type: string;
         id: number;
-    }
-    export interface ProxyCreate extends ProxyDelta {
         obj: Object;
     }
-    export type ProxyUpdate = ProxyCreate;
-    export type ProxyDelete = ProxyDelta;
-
-
-    export interface ProxyCreateResponse extends Response {
+    interface ProxyCreate extends ProxyDelta {
+        type: string;
+    }
+    type ProxyUpdate = ProxyDelta;
+    type ProxyDelete = ProxyDelta;
+    interface ProxyCreateResponse extends ResponseMessage {
         data: ProxyCreate;
     }
-
-    export interface ProxyUpdateResponse extends Response {
+    function ProxyCreateResponse(proxyCreate: ProxyCreate): ProxyCreateResponse;
+    interface ProxyUpdateResponse extends ResponseMessage {
         data: ProxyUpdate;
     }
-
-    export interface ProxyDeleteResponse extends Response {
+    function ProxyUpdateResponse(proxyUpdate: ProxyUpdate): ProxyUpdateResponse;
+    interface ProxyDeleteResponse extends ResponseMessage {
         data: ProxyDelete;
     }
-}declare function throwProxyStubError(...args: any[]): Promise<any>;
-declare function ProxyStub<T extends (...args: any[]) => Promise<any>>(): T;
-declare namespace ProxyStub {
-    interface Handler {
-        (key: string | number | symbol, ...args: any[]): Promise<any>;
-    }
-    function injectHandler<T>(obj: T, handler: Handler): {
-        proxy: T;
-        revoke: () => void;
-    };
 }
-declare class ConnectionHandler {
-    private extensionId;
-    private port;
-    private portId;
-    private messageIdIncrementer;
-    version: string;
-    constructor(extensionId: string, callback: (success: boolean) => void);
-    reconnect(): Promise<void>;
-    disconnect(): void;
-    private messageListener(message);
+declare namespace CBL {
+}
+declare namespace CBL {
+    class ClientConnectionHandler {
+        private extensionId;
+        private port;
+        private clientId;
+        private messageIdIncrementer;
+        version: string;
+        constructor(extensionId: string, callback?: (success: boolean) => void);
+        reconnect(): Promise<void>;
+        disconnect(): void;
+        private messageListener(rawResponse);
+    }
+}
+declare namespace CBL {
+    enum LogLevel {
+        LOG = 0,
+        WARN = 1,
+        ERROR = 2,
+        NONE = 3,
+    }
+    const debug: {
+        log: (...parms: any[]) => void;
+        warn: (...parms: any[]) => void;
+        error: (...parms: any[]) => void;
+    };
+    function setLogLevel(logLevel: LogLevel): void;
 }

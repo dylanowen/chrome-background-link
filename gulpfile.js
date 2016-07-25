@@ -6,7 +6,6 @@ var watch = require('gulp-watch');
 var runSequence = require('run-sequence');
 var del = require('del');
 var fs = require('fs');
-var merge = require('merge2');
 var dtsGenerator = require('dts-generator');
 var replace = require('gulp-regex-replace');
 

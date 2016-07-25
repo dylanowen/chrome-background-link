@@ -10,7 +10,6 @@
     "gulp-regex-replace": "^0.2.3",
     "gulp-typescript": "^2.13.6",
     "gulp-watch": "^4.3.5",
-    "merge2": "^1.0.2",
     "run-sequence": "^1.2.2"
   }
 }

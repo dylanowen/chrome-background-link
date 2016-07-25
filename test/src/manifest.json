@@ -1,0 +1,21 @@
+{
+    "manifest_version": 2,
+
+    "name": "Chrome Background Link Test",
+    "description": "",
+    "version": "0.0.0.1",
+    "minimum_chrome_version": "33",
+    "offline_enabled": true,
+    "author": "Dylan Owen",
+
+    "permissions": [
+        "background"
+    ],
+
+    "background": {
+        "scripts": [
+            "lib/cbl-background.js",
+            "js/background.js"
+        ]
+    }
+}
