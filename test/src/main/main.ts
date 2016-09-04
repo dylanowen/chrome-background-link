@@ -9,10 +9,10 @@ const init = (): void => {
     const extensionId = chrome.runtime.id;
 
     connection = new CBL.ClientConnectionHandler(extensionId, (success) => {
-        console.log(success);
+        CBL.debug.log(success);
     });
 
-    console.log('ready');
+    CBL.debug.log('ready');
 }
 
 if (document.readyState == 'complete') {

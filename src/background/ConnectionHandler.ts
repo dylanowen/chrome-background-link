@@ -47,12 +47,10 @@ namespace CBL {
 
             //start listening for messages
             this.chromePort.onMessage.addListener(this.messageListener.bind(this));
-            this.chromePort.onDisconnect.addListener(this.disconnectListener.bind(this));
-
             //send the proxy objects we're tracking
         }
 
-        disconnectListener(): void {
+        disconnect(): void {
             this.open = false;
 
             debug.log('Client ' + this.clientId + ' disconnected');
@@ -135,6 +133,7 @@ namespace CBL {
 
             const proxy = new Proxy(obj, {
                 set: (target: T, key: PropertyKey, value: any, receiver: any): boolean => {
+                    // maybe filter by type here?
                     const delta: any = {}
                     delta[key] = value;
 
@@ -191,6 +190,8 @@ namespace CBL {
         }
 
         private disconnectListener(id: number): void {
+            this.connections.get(id).disconnect();
+
             this.connections.delete(id);
         }
 
@@ -215,7 +216,3 @@ namespace CBL {
         }
     }
 }
-
-//class ConnectionHandler {
-    
-//}

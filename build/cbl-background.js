@@ -94,9 +94,8 @@ var CBL;
             this.postMessage(CBL.InitialMessage(this.clientId, this.connectionHandler.getInitialProxies()));
             CBL.debug.log('Client ' + this.clientId + ' connected');
             this.chromePort.onMessage.addListener(this.messageListener.bind(this));
-            this.chromePort.onDisconnect.addListener(this.disconnectListener.bind(this));
         }
-        disconnectListener() {
+        disconnect() {
             this.open = false;
             CBL.debug.log('Client ' + this.clientId + ' disconnected');
         }
@@ -177,6 +176,7 @@ var CBL;
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
         }
         disconnectListener(id) {
+            this.connections.get(id).disconnect();
             this.connections.delete(id);
         }
         validateConnection(sender) {
