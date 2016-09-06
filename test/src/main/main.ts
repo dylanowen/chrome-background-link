@@ -3,8 +3,7 @@
 /// <reference path="../lib/bl-client.d.ts"/>
 
 bl.setLogLevel(bl.LogLevel.VERBOSE);
-const network = bl.CreateDefaultClient();
-const logger = new bl.LoggingApplication(network);
+const [network, logger, proxy] = bl.CreateDefaultClient();
 
 function documentReady(): Promise<void> {
     return new Promise<void>((resolve: () => void) => {

@@ -120,7 +120,7 @@ namespace bl {
             }
 
             try {
-                const response: Promise<Object> = application.messageEvent(request.data);
+                const response: Promise<Serializable> = application.messageEvent(request.data);
 
                 if (response != null) {
                     return response.then((result: Serializable): network.Packet => {
@@ -142,7 +142,7 @@ namespace bl {
             }
         }
 
-        broadcast(path: string, response: Object): void {
+        broadcast(path: string, response: Serializable): void {
             const packet = {
                 path: path,
                 data: response
@@ -164,12 +164,23 @@ namespace bl {
 
             const connection = new PersistentConnection(chromePort, id, this);
 
+            const postMessage = (connection: PersistentConnection, path: string, response: Serializable): void => {
+                const packet: network.Packet = {
+                    path: path,
+                    data: response
+                };
+
+                connection.postPacket(packet);
+            };
+
             this.connections.set(id, connection);
 
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
 
-            for (const application of this.applications.values()) {
-                application.connectionEvent
+            for (const [path, application] of this.applications) {
+                // let our application know about the open connectsions
+                //TODO this isn't really the model I was going for, why does the application need to know about each connection? I don't want applications tracking that themselves
+                application.connectionEvent(postMessage.bind(this, connection, path));
             }
         }
 

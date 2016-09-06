@@ -56,8 +56,7 @@ var bl;
     class ErrorApplication {
         setBroadcast(broadcast) {
         }
-        connectionEvent() {
-            return null;
+        connectionEvent(postMessage) {
         }
         messageEvent(message) {
             bl.debug.error(message);
@@ -177,10 +176,17 @@ var bl;
         connectionListener(chromePort) {
             const id = this.clientIdIncrementer++;
             const connection = new PersistentConnection(chromePort, id, this);
+            const postMessage = (connection, path, response) => {
+                const packet = {
+                    path: path,
+                    data: response
+                };
+                connection.postPacket(packet);
+            };
             this.connections.set(id, connection);
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
-            for (const application of this.applications.values()) {
-                application.connectionEvent;
+            for (const [path, application] of this.applications) {
+                application.connectionEvent(postMessage.bind(this, connection, path));
             }
         }
         disconnectListener(id) {
@@ -223,23 +229,14 @@ var bl;
 var bl;
 (function (bl) {
     bl.LOGGING_PATH = 'log';
-})(bl || (bl = {}));
-var bl;
-(function (bl) {
-    function CreateDefaultServer(whitelist = []) {
-        const server = new bl.ServerNetworkHandler(whitelist);
-        server.registerApplication(bl.LOGGING_PATH, new bl.LoggingApplication());
-        return server;
-    }
-    bl.CreateDefaultServer = CreateDefaultServer;
+    bl.PROXY_PATH = 'proxy';
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
     class LoggingApplication {
         setBroadcast(broadcast) {
         }
-        connectionEvent() {
-            return null;
+        connectionEvent(postMessage) {
         }
         messageEvent(message) {
             if (message instanceof Array) {
@@ -252,4 +249,33 @@ var bl;
         }
     }
     bl.LoggingApplication = LoggingApplication;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class ProxyApplication {
+        setBroadcast(broadcast) {
+        }
+        connectionEvent(postMessage) {
+        }
+        messageEvent(message) {
+            if (message instanceof Array) {
+                bl.debug.log.apply(null, message);
+            }
+            else {
+                bl.debug.log(message);
+            }
+            return null;
+        }
+    }
+    bl.ProxyApplication = ProxyApplication;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    function CreateDefaultServer(whitelist = []) {
+        const server = new bl.ServerNetworkHandler(whitelist);
+        server.registerApplication(bl.LOGGING_PATH, new bl.LoggingApplication());
+        server.registerApplication(bl.PROXY_PATH, new bl.ProxyApplication());
+        return server;
+    }
+    bl.CreateDefaultServer = CreateDefaultServer;
 })(bl || (bl = {}));

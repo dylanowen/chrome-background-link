@@ -9,18 +9,11 @@
 
 namespace bl {
 
-    export class LoggingApplication implements Application {
+    export class ProxyApplication implements Application {
         private client: ClientNetworkHandler;
 
         constructor(client: ClientNetworkHandler) {
             this.client = client;
-        }
-
-        log(...parms: Serializable[]): void {
-            //debug.verbose('Sending to server: ');
-            //debug.verbose.apply(null, parms);
-
-            this.client.sendMessage(LOGGING_PATH, parms);
         }
 
         // Override

@@ -1,4 +1,9 @@
 declare namespace bl {
+    interface Application {
+        messageEvent(message: Serializable): void;
+    }
+}
+declare namespace bl {
     type SimpleSerializable = boolean | number | string | Object;
     type Serializable = SimpleSerializable | SimpleSerializable[];
 }
@@ -20,6 +25,7 @@ declare namespace bl {
 }
 declare namespace bl {
     const LOGGING_PATH: string;
+    const PROXY_PATH: string;
 }
 declare namespace bl {
     namespace network {
@@ -43,25 +49,35 @@ declare namespace bl {
         private port;
         private clientId;
         private messageIdIncrementer;
+        private applications;
         private readyPromise;
         version: string;
         constructor(extensionId?: string);
+        sendMessage<T>(path: string, message: Serializable): void;
+        private messageListener(rawResponse);
+        registerApplication(path: string, application: Application): void;
         ready(): Promise<void>;
         reconnect(): Promise<void>;
         disconnect(): void;
-        sendMessage<T>(path: string, message: Serializable): void;
-        private messageListener(rawResponse);
     }
 }
 declare namespace bl {
-    class LoggingApplication {
+    class LoggingApplication implements Application {
         private client;
         constructor(client: ClientNetworkHandler);
         log(...parms: Serializable[]): void;
+        messageEvent(message: Serializable): void;
+    }
+}
+declare namespace bl {
+    class ProxyApplication implements Application {
+        private client;
+        constructor(client: ClientNetworkHandler);
+        messageEvent(message: Serializable): void;
     }
 }
 declare namespace bl {
 }
 declare namespace bl {
-    function CreateDefaultClient(extensionId?: string): ClientNetworkHandler;
+    function CreateDefaultClient(extensionId?: string): [ClientNetworkHandler, LoggingApplication, ProxyApplication];
 }

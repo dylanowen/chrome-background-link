@@ -13,9 +13,8 @@ namespace bl {
             // we don't care about broadcasting
         } 
 
-        connectionEvent(): Promise<Object> {
+        connectionEvent(postMessage: PostMessage): void {
             // we don't care about new connections
-            return null;
         }
 
         messageEvent(message: Serializable): Promise<Object> {

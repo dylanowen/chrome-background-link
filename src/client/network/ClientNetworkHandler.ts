@@ -13,6 +13,8 @@ namespace bl {
         private clientId: number;
         private messageIdIncrementer: number = 1;
 
+        private applications: Map<string, Application> = new Map();
+
         private readyPromise: Promise<void> = null;
 
         version: string;
@@ -28,6 +30,44 @@ namespace bl {
 
                 throw reason;
             });
+        }
+
+        sendMessage<T>(path: string, message: Serializable): void {
+            if (this.port != null) {
+                const packet: network.Packet = {
+                    path: path,
+                    data: message
+                }
+
+                debug.verbose('Sending Packet: ', packet);
+
+                this.port.postMessage(JSON.stringify(packet));
+            }
+            else {
+                throw new Error('implement a message queue');
+            }
+        }
+
+        private messageListener(rawResponse: string): void {
+            try {
+                let packet: network.Packet = JSON.parse(rawResponse);
+
+                debug.verbose('Receiving Packet: ', packet);
+
+                const path: string = packet.path;
+                if (this.applications.has(path)) {
+                    const application: Application = this.applications.get(path);
+
+                    application.messageEvent(packet.data);
+                }
+            }
+            catch (e) {
+                debug.error('Failed to parse the message: ' + rawResponse, e);
+            }
+        }
+
+        registerApplication(path: string, application: Application): void {
+            this.applications.set(path, application);
         }
 
         ready(): Promise<void> {
@@ -107,36 +147,7 @@ namespace bl {
             //@_messageCallbacks = {}
             this.port = null;
             this.clientId = -1;
-        }
-
-        sendMessage<T>(path: string, message: Serializable): void {
-            if (this.port != null) {
-                const packet: network.Packet = {
-                    path: path,
-                    data: message
-                }
-
-                debug.verbose('Sending Message', message);
-                this.port.postMessage(JSON.stringify(packet));
-            }
-            else {
-                throw new Error('implement a message queue');
-            }
-        }
-
-        private messageListener(rawResponse: string): void {
-            try {
-                let response: network.Packet = JSON.parse(rawResponse);
-
-                console.log(response);
-            }
-            catch (e) {
-                debug.error('Failed to parse the message: ' + rawResponse, e);
-            }
-
-
-
-            //return this.connectionHandler.handleMessage(request);
+            this.readyPromise = null;
         }
     }
 }

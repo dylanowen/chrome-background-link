@@ -3,26 +3,33 @@ declare namespace bl {
     type Serializable = SimpleSerializable | SimpleSerializable[];
 }
 declare namespace bl {
-    type Connection = (message: Object) => void;
-    type Broadcast = (response: Object) => void;
+    type PostMessage = (message: Serializable) => void;
+    type Broadcast = (response: Serializable) => void;
     interface Application {
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Object>;
-        messageEvent(message: Serializable): Promise<Object>;
+        connectionEvent(postMessage: PostMessage): void;
+        messageEvent(message: Serializable): Promise<Serializable>;
     }
 }
 declare namespace bl {
     class ErrorApplication implements Application {
         static PATH: string;
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Object>;
+        connectionEvent(postMessage: PostMessage): void;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
     class LoggingApplication implements Application {
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Object>;
+        connectionEvent(postMessage: PostMessage): void;
+        messageEvent(message: Serializable): Promise<Object>;
+    }
+}
+declare namespace bl {
+    class ProxyApplication implements Application {
+        setBroadcast(broadcast: Broadcast): void;
+        connectionEvent(postMessage: PostMessage): void;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
@@ -69,7 +76,7 @@ declare namespace bl {
         constructor(whitelist?: string[]);
         registerApplication(path: string, application: Application, persistentOnly?: boolean): void;
         handlePacket(rawRequest: string, fromPersistent?: boolean): Promise<network.Packet>;
-        broadcast(path: string, response: Object): void;
+        broadcast(path: string, response: Serializable): void;
         private externalConnectionListener(chromePort);
         private connectionListener(chromePort);
         private disconnectListener(id);
@@ -80,6 +87,7 @@ declare namespace bl {
 }
 declare namespace bl {
     const LOGGING_PATH: string;
+    const PROXY_PATH: string;
 }
 declare namespace bl {
     function CreateDefaultServer(whitelist?: string[]): ServerNetworkHandler;

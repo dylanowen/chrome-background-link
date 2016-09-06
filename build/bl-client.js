@@ -61,6 +61,11 @@ var bl;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
+    bl.LOGGING_PATH = 'log';
+    bl.PROXY_PATH = 'proxy';
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
     var network;
     (function (network) {
         network.INITIAL_PATH = 'initial';
@@ -82,6 +87,7 @@ var bl;
         constructor(extensionId = chrome.runtime.id) {
             this.port = null;
             this.messageIdIncrementer = 1;
+            this.applications = new Map();
             this.readyPromise = null;
             this.extensionId = extensionId;
             const cleanup = () => {
@@ -91,6 +97,36 @@ var bl;
                 cleanup();
                 throw reason;
             });
+        }
+        sendMessage(path, message) {
+            if (this.port != null) {
+                const packet = {
+                    path: path,
+                    data: message
+                };
+                bl.debug.verbose('Sending Packet: ', packet);
+                this.port.postMessage(JSON.stringify(packet));
+            }
+            else {
+                throw new Error('implement a message queue');
+            }
+        }
+        messageListener(rawResponse) {
+            try {
+                let packet = JSON.parse(rawResponse);
+                bl.debug.verbose('Receiving Packet: ', packet);
+                const path = packet.path;
+                if (this.applications.has(path)) {
+                    const application = this.applications.get(path);
+                    application.messageEvent(packet.data);
+                }
+            }
+            catch (e) {
+                bl.debug.error('Failed to parse the message: ' + rawResponse, e);
+            }
+        }
+        registerApplication(path, application) {
+            this.applications.set(path, application);
         }
         ready() {
             if (this.clientId !== -1) {
@@ -141,43 +177,10 @@ var bl;
             }
             this.port = null;
             this.clientId = -1;
-        }
-        sendMessage(path, message) {
-            if (this.port != null) {
-                const packet = {
-                    path: path,
-                    data: message
-                };
-                bl.debug.verbose('Sending Message', message);
-                this.port.postMessage(JSON.stringify(packet));
-            }
-            else {
-                throw new Error('implement a message queue');
-            }
-        }
-        messageListener(rawResponse) {
-            try {
-                let response = JSON.parse(rawResponse);
-                console.log(response);
-            }
-            catch (e) {
-                bl.debug.error('Failed to parse the message: ' + rawResponse, e);
-            }
+            this.readyPromise = null;
         }
     }
     bl.ClientNetworkHandler = ClientNetworkHandler;
-})(bl || (bl = {}));
-var bl;
-(function (bl) {
-    function CreateDefaultClient(extensionId = chrome.runtime.id) {
-        const client = new bl.ClientNetworkHandler(extensionId);
-        return client;
-    }
-    bl.CreateDefaultClient = CreateDefaultClient;
-})(bl || (bl = {}));
-var bl;
-(function (bl) {
-    bl.LOGGING_PATH = 'log';
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
@@ -188,6 +191,31 @@ var bl;
         log(...parms) {
             this.client.sendMessage(bl.LOGGING_PATH, parms);
         }
+        messageEvent(message) {
+        }
     }
     bl.LoggingApplication = LoggingApplication;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class ProxyApplication {
+        constructor(client) {
+            this.client = client;
+        }
+        messageEvent(message) {
+        }
+    }
+    bl.ProxyApplication = ProxyApplication;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    function CreateDefaultClient(extensionId = chrome.runtime.id) {
+        const client = new bl.ClientNetworkHandler(extensionId);
+        const logging = new bl.LoggingApplication(client);
+        const proxy = new bl.ProxyApplication(client);
+        client.registerApplication(bl.LOGGING_PATH, logging);
+        client.registerApplication(bl.PROXY_PATH, proxy);
+        return [client, logging, proxy];
+    }
+    bl.CreateDefaultClient = CreateDefaultClient;
 })(bl || (bl = {}));
