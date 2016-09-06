@@ -1,10 +1,14 @@
 declare namespace bl {
+    type SimpleSerializable = boolean | number | string | Object;
+    type Serializable = SimpleSerializable | SimpleSerializable[];
+}
+declare namespace bl {
     type Connection = (message: Object) => void;
     type Broadcast = (response: Object) => void;
     interface Application {
         setBroadcast(broadcast: Broadcast): void;
         connectionEvent(): Promise<Object>;
-        messageEvent<T>(message: T): Promise<Object>;
+        messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
@@ -12,33 +16,31 @@ declare namespace bl {
         static PATH: string;
         setBroadcast(broadcast: Broadcast): void;
         connectionEvent(): Promise<Object>;
-        messageEvent<T>(message: T): Promise<Object>;
+        messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
     class LoggingApplication implements Application {
         setBroadcast(broadcast: Broadcast): void;
         connectionEvent(): Promise<Object>;
-        messageEvent<T>(message: T): Promise<Object>;
+        messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
     enum LogLevel {
-        LOG = 0,
-        WARN = 1,
-        ERROR = 2,
-        NONE = 3,
+        VERBOSE = 0,
+        LOG = 1,
+        WARN = 2,
+        ERROR = 3,
+        NONE = 4,
     }
     const debug: {
+        verbose: (...parms: any[]) => void;
         log: (...parms: any[]) => void;
         warn: (...parms: any[]) => void;
         error: (...parms: any[]) => void;
     };
     function setLogLevel(logLevel: LogLevel): void;
-}
-declare namespace bl {
-    type SimpleSerializable = boolean | number | string | Object;
-    type Serializable = SimpleSerializable | SimpleSerializable[];
 }
 declare namespace bl {
     namespace network {

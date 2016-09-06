@@ -14,8 +14,13 @@ namespace bl {
             return null;
         }
 
-        messageEvent<T>(message: T): Promise<Object> {
-            debug.log(message);
+        messageEvent(message: Serializable): Promise<Object> {
+            if (message instanceof Array) {
+                debug.log.apply(null, message);
+            }
+            else {
+                debug.log(message);
+            }
 
             return null;
         }

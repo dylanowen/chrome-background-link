@@ -23,11 +23,15 @@ namespace bl {
             const cleanup = (): void => {
                 this.readyPromise = null;
             }
-            this.readyPromise = this.reconnect().then(cleanup, cleanup);
+            this.readyPromise = this.reconnect().then(cleanup, (reason) => {
+                cleanup();
+
+                throw reason;
+            });
         }
 
         ready(): Promise<void> {
-            if (this.port !== null) {
+            if (this.clientId !== -1) {
                 return Promise.resolve();
             }
             else if (this.readyPromise !== null) {
@@ -46,14 +50,12 @@ namespace bl {
                 let receivedStatus = false;
                 setTimeout(() => {
                     if (!receivedStatus) {
-                        const errorMessage = 'Catastrophic Conection Error: could not reach the background process';
+                        const errorMessage = 'Catastrophic Conection Error: could not reach the background process at "' + this.extensionId + '"';
 
                         reject(errorMessage);
                         debug.error(errorMessage);
                     }
                 }, 1000);
-
-                this.port = chrome.runtime.connect(this.extensionId);
 
                 const initialListener = (message: string): void => {
                     //clear out the listener
@@ -90,6 +92,8 @@ namespace bl {
                     */
                 }
 
+                this.port = chrome.runtime.connect(this.extensionId);
+
                 this.port.onMessage.addListener(initialListener);
             });
         }
@@ -112,7 +116,7 @@ namespace bl {
                     data: message
                 }
 
-                debug.log('Sending Message', message);
+                debug.verbose('Sending Message', message);
                 this.port.postMessage(JSON.stringify(packet));
             }
             else {

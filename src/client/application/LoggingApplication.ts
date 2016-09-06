@@ -15,8 +15,8 @@ namespace bl {
         }
 
         log(...parms: Serializable[]): void {
-            debug.log('Sending to server: ');
-            debug.log.apply(null, parms);
+            //debug.verbose('Sending to server: ');
+            //debug.verbose.apply(null, parms);
 
             this.client.sendMessage(LOGGING_PATH, parms);
         }

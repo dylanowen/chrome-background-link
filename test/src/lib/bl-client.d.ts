@@ -4,12 +4,14 @@ declare namespace bl {
 }
 declare namespace bl {
     enum LogLevel {
-        LOG = 0,
-        WARN = 1,
-        ERROR = 2,
-        NONE = 3,
+        VERBOSE = 0,
+        LOG = 1,
+        WARN = 2,
+        ERROR = 3,
+        NONE = 4,
     }
     const debug: {
+        verbose: (...parms: any[]) => void;
         log: (...parms: any[]) => void;
         warn: (...parms: any[]) => void;
         error: (...parms: any[]) => void;
@@ -47,7 +49,7 @@ declare namespace bl {
         ready(): Promise<void>;
         reconnect(): Promise<void>;
         disconnect(): void;
-        sendMessage<T>(path: string, message: Object | Object[]): void;
+        sendMessage<T>(path: string, message: Serializable): void;
         private messageListener(rawResponse);
     }
 }

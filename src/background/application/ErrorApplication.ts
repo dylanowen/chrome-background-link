@@ -1,3 +1,5 @@
+/// <reference path="../../global/Global.ts"/>
+
 /// <reference path="Application.ts"/>
 
 /*
@@ -16,7 +18,7 @@ namespace bl {
             return null;
         }
 
-        messageEvent<T>(message: T): Promise<Object> {
+        messageEvent(message: Serializable): Promise<Object> {
             debug.error(message);
 
             // log and pass through the message

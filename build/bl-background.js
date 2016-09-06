@@ -1,23 +1,28 @@
 var bl;
 (function (bl) {
     (function (LogLevel) {
-        LogLevel[LogLevel["LOG"] = 0] = "LOG";
-        LogLevel[LogLevel["WARN"] = 1] = "WARN";
-        LogLevel[LogLevel["ERROR"] = 2] = "ERROR";
-        LogLevel[LogLevel["NONE"] = 3] = "NONE";
+        LogLevel[LogLevel["VERBOSE"] = 0] = "VERBOSE";
+        LogLevel[LogLevel["LOG"] = 1] = "LOG";
+        LogLevel[LogLevel["WARN"] = 2] = "WARN";
+        LogLevel[LogLevel["ERROR"] = 3] = "ERROR";
+        LogLevel[LogLevel["NONE"] = 4] = "NONE";
     })(bl.LogLevel || (bl.LogLevel = {}));
     var LogLevel = bl.LogLevel;
     const emptyFunc = () => { };
     bl.debug = {
+        verbose: emptyFunc,
         log: emptyFunc,
         warn: emptyFunc,
         error: emptyFunc
     };
     function setLogLevel(logLevel) {
+        bl.debug.verbose = emptyFunc;
         bl.debug.log = emptyFunc;
         bl.debug.warn = emptyFunc;
         bl.debug.error = emptyFunc;
         switch (logLevel) {
+            case LogLevel.VERBOSE:
+                bl.debug.verbose = console.log.bind(console);
             case LogLevel.LOG:
                 bl.debug.log = console.log.bind(console);
             case LogLevel.WARN:
@@ -237,7 +242,12 @@ var bl;
             return null;
         }
         messageEvent(message) {
-            bl.debug.log(message);
+            if (message instanceof Array) {
+                bl.debug.log.apply(null, message);
+            }
+            else {
+                bl.debug.log(message);
+            }
             return null;
         }
     }

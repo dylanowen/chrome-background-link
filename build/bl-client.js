@@ -1,23 +1,28 @@
 var bl;
 (function (bl) {
     (function (LogLevel) {
-        LogLevel[LogLevel["LOG"] = 0] = "LOG";
-        LogLevel[LogLevel["WARN"] = 1] = "WARN";
-        LogLevel[LogLevel["ERROR"] = 2] = "ERROR";
-        LogLevel[LogLevel["NONE"] = 3] = "NONE";
+        LogLevel[LogLevel["VERBOSE"] = 0] = "VERBOSE";
+        LogLevel[LogLevel["LOG"] = 1] = "LOG";
+        LogLevel[LogLevel["WARN"] = 2] = "WARN";
+        LogLevel[LogLevel["ERROR"] = 3] = "ERROR";
+        LogLevel[LogLevel["NONE"] = 4] = "NONE";
     })(bl.LogLevel || (bl.LogLevel = {}));
     var LogLevel = bl.LogLevel;
     const emptyFunc = () => { };
     bl.debug = {
+        verbose: emptyFunc,
         log: emptyFunc,
         warn: emptyFunc,
         error: emptyFunc
     };
     function setLogLevel(logLevel) {
+        bl.debug.verbose = emptyFunc;
         bl.debug.log = emptyFunc;
         bl.debug.warn = emptyFunc;
         bl.debug.error = emptyFunc;
         switch (logLevel) {
+            case LogLevel.VERBOSE:
+                bl.debug.verbose = console.log.bind(console);
             case LogLevel.LOG:
                 bl.debug.log = console.log.bind(console);
             case LogLevel.WARN:
@@ -82,10 +87,13 @@ var bl;
             const cleanup = () => {
                 this.readyPromise = null;
             };
-            this.readyPromise = this.reconnect().then(cleanup, cleanup);
+            this.readyPromise = this.reconnect().then(cleanup, (reason) => {
+                cleanup();
+                throw reason;
+            });
         }
         ready() {
-            if (this.port !== null) {
+            if (this.clientId !== -1) {
                 return Promise.resolve();
             }
             else if (this.readyPromise !== null) {
@@ -101,12 +109,11 @@ var bl;
                 let receivedStatus = false;
                 setTimeout(() => {
                     if (!receivedStatus) {
-                        const errorMessage = 'Catastrophic Conection Error: could not reach the background process';
+                        const errorMessage = 'Catastrophic Conection Error: could not reach the background process at "' + this.extensionId + '"';
                         reject(errorMessage);
                         bl.debug.error(errorMessage);
                     }
                 }, 1000);
-                this.port = chrome.runtime.connect(this.extensionId);
                 const initialListener = (message) => {
                     this.port.onMessage.removeListener(initialListener);
                     receivedStatus = true;
@@ -124,6 +131,7 @@ var bl;
                         bl.debug.error(errorMessage);
                     }
                 };
+                this.port = chrome.runtime.connect(this.extensionId);
                 this.port.onMessage.addListener(initialListener);
             });
         }
@@ -140,7 +148,7 @@ var bl;
                     path: path,
                     data: message
                 };
-                bl.debug.log('Sending Message', message);
+                bl.debug.verbose('Sending Message', message);
                 this.port.postMessage(JSON.stringify(packet));
             }
             else {
@@ -178,8 +186,6 @@ var bl;
             this.client = client;
         }
         log(...parms) {
-            bl.debug.log('Sending to server: ');
-            bl.debug.log.apply(null, parms);
             this.client.sendMessage(bl.LOGGING_PATH, parms);
         }
     }
