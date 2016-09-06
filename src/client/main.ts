@@ -1,6 +1,14 @@
 /// <reference path="../global/Debug.ts"/>
 /// <reference path="../global/ProxyStub.ts"/>
 
+/// <reference path="network/ClientNetworkHandler.ts"/>
+
+
+namespace bl {
+    export const Network = network.ClientNetworkHandler;
+}
+
+
 
 //TODO https://github.com/Microsoft/TypeScript/issues/2829
 

@@ -1,20 +1,9 @@
-namespace CBL {
+namespace bl {
     //here just for some type checking
-    export interface Message {}
+    
+    export interface ResponseMessage {}
 
-    export interface InitialMessage extends Message {
-        clientId: number;
-        version: string;
-        proxies: ProxyCreate[];
-    }
-    export function InitialMessage(clientId: number, proxies: ProxyCreate[]): InitialMessage {
-        return {
-            clientId,
-            version: chrome.runtime.getManifest().version,
-            proxies
-        };
-    } 
-
+    /*
     export enum RequestType {
         PROXY_INVOKE
     }
@@ -74,4 +63,5 @@ namespace CBL {
     }
 
     const RESERVED_TYPES: number = <number>RequestType.PROXY_INVOKE;
+    */
 }

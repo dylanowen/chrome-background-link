@@ -1,11 +1,12 @@
-/// <reference path="../external_types/chrome/chrome.d.ts"/>
+/// <reference path="../../external_types/chrome/chrome.d.ts"/>
 
-/// <reference path="../global/Message.ts"/>
-/// <reference path="../global/ProxyStub.ts"/>
+/// <reference path="../../global/Debug.ts"/>
+
+/// <reference path="../../global/network/NetworkPacket.ts"/>
 
 
-namespace CBL {
-    export class ClientConnectionHandler {
+namespace bl { export namespace network {
+    export class ClientNetworkHandler {
         private extensionId: string;
         private port: chrome.runtime.Port = null;
         private clientId: number;
@@ -13,11 +14,13 @@ namespace CBL {
 
         version: string;
 
-        constructor(extensionId: string, callback: (success: boolean) => void = () => {}) {
+        constructor(extensionId: string = chrome.runtime.id) {
             this.extensionId = extensionId;
             
+            /*
             //setup the callback to use the promise
             this.reconnect().then(callback.bind(null, true)).catch(callback.bind(null, false));
+            */
         }
 
         reconnect(): Promise<void> {
@@ -45,11 +48,9 @@ namespace CBL {
                     receivedStatus = true;
 
                     try {
-                        const {clientId, version, proxies} = <InitialMessage>JSON.parse(message);
+                        const {clientId, version} = (<InitialPacket>JSON.parse(message)).data;
                         this.clientId = clientId;
                         this.version = version;
-
-                        console.log(proxies);
 
                         //bind the main message listener
                         this.port.onMessage.addListener(this.messageListener.bind(this));
@@ -91,7 +92,7 @@ namespace CBL {
 
         private messageListener(rawResponse: string): void {
             try {
-                let response: ResponseMessage = JSON.parse(rawResponse);
+                let response: Packet = JSON.parse(rawResponse);
 
                 console.log(response);
             }
@@ -104,7 +105,7 @@ namespace CBL {
             //return this.connectionHandler.handleMessage(request);
         }
     }
-}
+} }
 
 /*
 ###*

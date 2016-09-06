@@ -1,0 +1,37 @@
+digraph "Rest Tasks Jun 2016" {
+    concentrate=true
+    rankdir = BT;
+    graph [splines=ortho, nodesep=1]
+    node [colorscheme=set312 shape=record fontname="Courier New"]
+    
+    subgraph cluster_server_transport {
+        PersistentConnectionHandler [label="{\N|\
+            handleMessage(rawMessage)\l\
+            registerApplication(type, application, persistentOnly)\l\
+        }"]
+        ConnectionHandler -> PersistentConnectionHandler
+
+
+        RequestMessage [label="{\N|\
+            type: number\l\
+            data: Object\l\
+        }"]
+
+        ResponseMessage
+    }
+
+    subgraph cluster_server_application {
+
+    }
+
+    subgraph cluster_client_transport {  
+    }
+
+    subgraph cluster_client_application {
+
+    }
+
+    subgraph cluster_message {
+
+    }
+}

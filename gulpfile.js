@@ -13,7 +13,7 @@ var config = {
     main: {
         src: 'src/',
         buildDest: './build/',
-        prefix: 'cbl-'
+        prefix: 'bl-'
     },
     test: {
         src: 'test/src/',
@@ -42,8 +42,8 @@ function declaration(configFolders, outputName, cb) {
 
     dtsGenerator.default({
         name: name,
-        //verbose: true,
-        //sendMessage: console.log,
+        verbose: true,
+        sendMessage: console.log,
         baseDir: configFolders.src,
         files: [outputName + '/**/*.ts', '**/*.d.ts'],
         exclude: ['external_types/**/*.*'],
@@ -53,8 +53,9 @@ function declaration(configFolders, outputName, cb) {
             .pipe(replace({regex: '/// <reference path.*\n', replace: ''}))
             .pipe(gulp.dest(configFolders.buildDest))
             .on('end', cb);
-    }).catch(function() {
-        cb('error');
+    }).catch(function(e) {
+        throw new Error('Error: ' + e);
+        cb('error: ' + e);
     });
 }
 const mainTypescript = function(outputName, cb) {
@@ -75,10 +76,6 @@ const mainTypescript = function(outputName, cb) {
 //main build
 gulp.task('build:compile:background', mainTypescript.bind(null, 'background'));
 gulp.task('build:compile:client', mainTypescript.bind(null, 'client'));
-gulp.task('build:compile:types', function() {
-    return gulp.src(config.main.src + '/types/*.d.ts')
-        .pipe(gulp.dest(config.main.buildDest));
-});
 gulp.task('build:compile', ['build:compile:background', 'build:compile:client']);
 
 gulp.task('build', function(cb) {

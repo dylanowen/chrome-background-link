@@ -1,9 +1,9 @@
 /// <reference path="../external_types/chrome/chrome.d.ts"/>
 
-/// <reference path="../lib/cbl-client.d.ts"/>
+/// <reference path="../lib/bl-client.d.ts"/>
 
-CBL.setLogLevel(CBL.LogLevel.LOG);
-let connection: CBL.ClientConnectionHandler;
+bl.setLogLevel(bl.LogLevel.LOG);
+let network = new bl.Network();
 
 const init = (): void => {
     const extensionId = chrome.runtime.id;

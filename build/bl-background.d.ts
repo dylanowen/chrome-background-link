@@ -1,11 +1,9 @@
-declare namespace bl {
-    export type Connection = (message: Object) => void;
-    export type Broadcast = (response: Object) => void;
+type Connection = (message: Object) => void;
+type Broadcast = (response: Object) => void;
 
-    export interface Application {
-        connectionEvent(connection: Connection): Promise<Object>;
-        messageEvent<T>(message: T): Promise<Object>;
-    }
+interface Application {
+    connectionEvent(connection: Connection): Promise<Object>;
+    messageEvent<T>(message: T): Promise<Object>;
 }declare namespace bl {
     enum LogLevel {
         LOG = 0,

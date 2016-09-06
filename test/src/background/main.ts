@@ -1,7 +1,11 @@
-/// <reference path="../lib/cbl-background.d.ts"/>
+/// <reference path="../lib/bl-background.d.ts"/>
 
 /// <reference path="../types/TestObject.d.ts"/>
 
+bl.setLogLevel(bl.LogLevel.LOG);
+const network = new bl.Network();
+
+/*
 CBL.setLogLevel(CBL.LogLevel.LOG);
 let connectionHandler: CBL.ConnectionHandler;
 
@@ -15,7 +19,7 @@ class LinkedObject implements TestObject {
     setTest(test: string): void {
         this.test = test;
 
-        console.log(this.test);
+        console.log(this.test); 
     }
 }
 
@@ -46,3 +50,4 @@ else {
 
     document.addEventListener('DOMContentLoaded', load);
 }
+*/

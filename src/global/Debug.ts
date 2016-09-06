@@ -1,4 +1,4 @@
-namespace CBL {
+namespace bl {
     export enum LogLevel {
         LOG,
         WARN,
