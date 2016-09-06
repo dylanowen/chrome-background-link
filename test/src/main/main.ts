@@ -5,28 +5,32 @@
 bl.setLogLevel(bl.LogLevel.LOG);
 let network = new bl.Network();
 
-const init = (): void => {
-    const extensionId = chrome.runtime.id;
+function documentReady(): Promise<void> {
+    return new Promise<void>((resolve: () => void) => {
+        if (document.readyState == 'complete') {
+            resolve();
+        }
+        else {
+            const load = (): void => {
+                document.removeEventListener('DOMContentLoaded', load);
 
-    connection = new CBL.ClientConnectionHandler(extensionId, (success) => {
-        CBL.debug.log(success);
+                resolve();
+            }
+
+            document.addEventListener('DOMContentLoaded', load);
+        }
+    });
+}
+
+Promise.all<void>([network.ready(), documentReady()])
+    .then(() => {
+        bl.debug.log('ready');
+    })
+    .catch((error) => {
+        console.error('Error initializing: ', error)
     });
 
-    CBL.debug.log('ready');
-}
 
-if (document.readyState == 'complete') {
-    init();
-}
-else {
-    const load = (): void => {
-        document.removeEventListener('DOMContentLoaded', load);
-
-        init();
-    }
-
-    document.addEventListener('DOMContentLoaded', load);
-}
 
 /*
 class Test {

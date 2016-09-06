@@ -93,7 +93,7 @@ namespace bl { export namespace network {
                 request = JSON.parse(rawRequest);
             }
             catch (e) {
-                return <Promise<any>>Promise.reject('Failed to parse the request: ' + rawRequest);
+                return Promise.reject<Packet>('Failed to parse the request: ' + rawRequest);
             }
 
             const path: string = request.path;
@@ -107,7 +107,7 @@ namespace bl { export namespace network {
 
             // make sure we found an application
             if (application == null) {
-                return <Promise<any>>Promise.reject('Failed to find the application at: ' + path);
+                return Promise.reject<Packet>('Failed to find the application at: ' + path);
             }
 
             try {
@@ -126,7 +126,7 @@ namespace bl { export namespace network {
             catch (e) {
                 debug.error('Internal error: ' + e);
 
-                return <Promise<any>>Promise.reject('Internal error: ' + e);
+                return Promise.reject<Packet>('Internal error: ' + e);
             }
         }
 

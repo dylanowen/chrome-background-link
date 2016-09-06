@@ -14,7 +14,7 @@
 
     "background": {
         "scripts": [
-            "lib/cbl-background.js",
+            "lib/bl-background.js",
             "js/background.js"
         ]
     }

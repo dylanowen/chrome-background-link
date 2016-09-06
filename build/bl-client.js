@@ -80,7 +80,23 @@ var bl;
             constructor(extensionId = chrome.runtime.id) {
                 this.port = null;
                 this.messageIdIncrementer = 1;
+                this.readyPromise = null;
                 this.extensionId = extensionId;
+                const cleanup = () => {
+                    this.readyPromise = null;
+                };
+                this.readyPromise = this.reconnect().then(cleanup, cleanup);
+            }
+            ready() {
+                if (this.port !== null) {
+                    return Promise.resolve();
+                }
+                else if (this.readyPromise !== null) {
+                    return this.readyPromise;
+                }
+                else {
+                    return Promise.reject('No connection has been established');
+                }
             }
             reconnect() {
                 this.disconnect();

@@ -12,15 +12,29 @@ namespace bl { export namespace network {
         private clientId: number;
         private messageIdIncrementer: number = 1;
 
+        private readyPromise: Promise<void> = null;
+
         version: string;
 
         constructor(extensionId: string = chrome.runtime.id) {
             this.extensionId = extensionId;
             
-            /*
-            //setup the callback to use the promise
-            this.reconnect().then(callback.bind(null, true)).catch(callback.bind(null, false));
-            */
+            const cleanup = (): void => {
+                this.readyPromise = null;
+            }
+            this.readyPromise = this.reconnect().then(cleanup, cleanup);
+        }
+
+        ready(): Promise<void> {
+            if (this.port !== null) {
+                return Promise.resolve();
+            }
+            else if (this.readyPromise !== null) {
+                return this.readyPromise;
+            }
+            else {
+                return Promise.reject('No connection has been established');
+            }
         }
 
         reconnect(): Promise<void> {

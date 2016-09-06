@@ -1,1 +1,0 @@
-const WTF: string = "wtf";

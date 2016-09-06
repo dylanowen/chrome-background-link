@@ -14,16 +14,47 @@ declare namespace bl {
 }
 declare namespace CBL {
 }
-declare namespace bl { export namespace network {
-    export interface Packet {
-        path: string;
-        data: Object;
+declare namespace bl {
+    namespace network {
+        interface Packet {
+            path: string;
+            data: Object;
+        }
+        interface InitialPacket extends Packet {
+            data: {
+                clientId: number;
+                version: string;
+            };
+        }
+        const INITIAL_PATH: string;
+        const ERROR_PATH: string;
+        function InitialPacket(clientId: number): InitialPacket;
     }
-
-    export interface InitialPacket extends Packet {
-        data: {
-            clientId: number,
-            version: string
+}
+declare namespace bl {
+    namespace network {
+        class ClientNetworkHandler {
+            private extensionId;
+            private port;
+            private clientId;
+            private messageIdIncrementer;
+            private readyPromise;
+            version: string;
+            constructor(extensionId?: string);
+            ready(): Promise<void>;
+            reconnect(): Promise<void>;
+            disconnect(): void;
+            private messageListener(rawResponse);
         }
     }
-} }
+}
+declare namespace bl {
+    const Network: typeof network.ClientNetworkHandler;
+}
+type Connection = (message: Object) => void;
+type Broadcast = (response: Object) => void;
+
+interface Application {
+    connectionEvent(connection: Connection): Promise<Object>;
+    messageEvent<T>(message: T): Promise<Object>;
+}

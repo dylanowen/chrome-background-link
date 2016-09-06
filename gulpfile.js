@@ -42,8 +42,8 @@ function declaration(configFolders, outputName, cb) {
 
     dtsGenerator.default({
         name: name,
-        verbose: true,
-        sendMessage: console.log,
+        //verbose: true,
+        //sendMessage: console.log,
         baseDir: configFolders.src,
         files: [outputName + '/**/*.ts', '**/*.d.ts'],
         exclude: ['external_types/**/*.*'],
