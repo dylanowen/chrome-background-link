@@ -1,10 +1,14 @@
 /// <reference path="../../external_types/chrome/chrome.d.ts"/>
 
+/// <reference path="../../global/Global.ts"/>
 /// <reference path="../../global/Debug.ts"/>
+
+/// <reference path="../application/Application.ts"/>
+/// <reference path="../application/ErrorApplication.ts"/>
 
 /// <reference path="../../global/network/NetworkPacket.ts"/>
 
-namespace bl { export namespace network {
+namespace bl {
 
     class PersistentConnection {
         private networkHandler: ServerNetworkHandler;
@@ -20,32 +24,35 @@ namespace bl { export namespace network {
             this.open = true;
 
             //let the client know the connection was successful
-            this.postPacket(InitialPacket(this.clientId));
+            this.postPacket(network.InitialPacket(this.clientId));
             debug.log('Client ' + this.clientId + ' connected');
 
             //start listening for messages
             this.chromePort.onMessage.addListener(this.handlePacket.bind(this));
         }
 
-         handlePacket(rawRequest: string): void {
-             const response: Promise<Packet> = this.networkHandler.handlePacket(rawRequest);
+        handlePacket(rawRequest: string): void {
+            const response: Promise<network.Packet> = this.networkHandler.handlePacket(rawRequest);
 
-             response.then((packet: Packet) => {
-                 this.postPacket(packet);
-             }).catch((e: any) => {
-                 debug.error('Missed internal error: ' + e);
+            // check if we have something to respond with
+            if (response !== null) {
+                response.then((packet: network.Packet) => {
+                    this.postPacket(packet);
+                }).catch((e: any) => {
+                    debug.error('Missed internal error: ' + e);
 
-                 throw new Error(e);
-             })
-         }
+                    throw new Error(e);
+                })
+            }
+        }
 
-         postPacket(packet: Packet): void {
-             if (this.open) {
-                 this.chromePort.postMessage(JSON.stringify(packet));    
-             }
-         }
+        postPacket(packet: network.Packet): void {
+            if (this.open) {
+                this.chromePort.postMessage(JSON.stringify(packet));    
+            }
+        }
 
-         disconnect(): void {
+        disconnect(): void {
             this.open = false;
 
             debug.log('Client ' + this.clientId + ' disconnected');
@@ -62,12 +69,14 @@ namespace bl { export namespace network {
         private connections: Map<number, PersistentConnection> = new Map();
         private oneOffApplications: Map<string, Application> = new Map();
         private applications: Map<string, Application> = new Map();
+        private errorApplication: Application = new ErrorApplication();
 
         //default to only the current extension
         constructor(whitelist: string[] = []) {
             this.whitelist = whitelist;
 
-            //this.oneOffHandler = new OneOffHandler(this);
+            // register our application for handling errors
+            this.registerApplication(ErrorApplication.PATH, this.errorApplication);
 
             chrome.runtime.onConnect.addListener(this.connectionListener.bind(this));
             chrome.runtime.onConnectExternal.addListener(this.externalConnectionListener.bind(this));
@@ -76,24 +85,24 @@ namespace bl { export namespace network {
             chrome.runtime.onMessageExternal.addListener(this.externalMessageListener);
         }
 
-        registerApplication(path: string, application: Application, persistentOnly: boolean = false): Broadcast {
+        registerApplication(path: string, application: Application, persistentOnly: boolean = false): void {
             if (!persistentOnly) {
                 this.oneOffApplications.set(path, application);
             }
 
             this.applications.set(path, application);
 
-            return this.broadcast.bind(this, path);
+            application.setBroadcast(this.broadcast.bind(this, path));
         }
 
-        handlePacket(rawRequest: string, fromPersistent: boolean = true): Promise<Packet> {
-            let request: Packet;
+        handlePacket(rawRequest: string, fromPersistent: boolean = true): Promise<network.Packet> {
+            let request: network.Packet;
 
             try {
                 request = JSON.parse(rawRequest);
             }
             catch (e) {
-                return Promise.reject<Packet>('Failed to parse the request: ' + rawRequest);
+                request = createErrorPacket('Failed to parse the request: ' + rawRequest);
             }
 
             const path: string = request.path;
@@ -101,32 +110,35 @@ namespace bl { export namespace network {
             if (!fromPersistent && this.oneOffApplications.has(path)) {
                 application = this.oneOffApplications.get(path);
             }
-            else {
+            else if (this.applications.has(path)) {
                 application = this.applications.get(path);
             }
-
-            // make sure we found an application
-            if (application == null) {
-                return Promise.reject<Packet>('Failed to find the application at: ' + path);
+            else {
+                // if we can't find an application use our ErrorApplication
+                request = createErrorPacket('Failed to find the application at: ' + path);
+                application = this.errorApplication;
             }
 
             try {
-                return application.messageEvent(request.data).then((result: Object): Packet => {
-                    return {
-                        path: path,
-                        data: result
-                    };
-                }).catch((error: string): Packet => {
-                    return {
-                        path: ERROR_PATH,
-                        data: error
-                    };
-                });
+                const response: Promise<Object> = application.messageEvent(request.data);
+
+                if (response != null) {
+                    return response.then((result: Serializable): network.Packet => {
+                        return {
+                            path: path,
+                            data: result
+                        };
+                    }).catch((error: string): network.Packet => {
+                        return createErrorPacket(error);
+                    });
+                }
+
+                return null;
             }
             catch (e) {
                 debug.error('Internal error: ' + e);
 
-                return Promise.reject<Packet>('Internal error: ' + e);
+                Promise.resolve(createErrorPacket('Internal error: ' + e));
             }
         }
 
@@ -155,6 +167,10 @@ namespace bl { export namespace network {
             this.connections.set(id, connection);
 
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
+
+            for (const application of this.applications.values()) {
+                application.connectionEvent
+            }
         }
 
         private disconnectListener(id: number): void {
@@ -170,17 +186,23 @@ namespace bl { export namespace network {
         }
 
         private messageListener(rawRequest: string, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void): boolean {
-            const response: Promise<Packet> = this.handlePacket(rawRequest);
+            const response: Promise<network.Packet> = this.handlePacket(rawRequest);
 
-             response.then((packet: Packet) => {
-                 sendResponse(JSON.stringify(packet));
-             }, (e: any) => {
-                 debug.error('Missed internal error: ' + e);
+            // check if we need to hold the connection open
+            if (response !== null) {
+                response.then((packet: network.Packet) => {
+                    sendResponse(JSON.stringify(packet));
+                }, (e: any) => {
+                    debug.error('Missed internal error: ' + e);
 
-                 throw new Error(e);
-             })
+                    throw new Error(e);
+                })
 
-            return true;
+                return true;
+            }
+            else {
+                return false;
+            }
         }
 
         private validateConnection(sender: chrome.runtime.MessageSender): void {
@@ -190,7 +212,14 @@ namespace bl { export namespace network {
             }
         }
     }
-} }
+
+    function createErrorPacket(message: Object): network.Packet {
+        return {
+            path: ErrorApplication.PATH,
+            data: message
+        };
+    }
+}
 
     /*
     private function parseMessage(rawRequest: string): Promise<ResponseMessage> {

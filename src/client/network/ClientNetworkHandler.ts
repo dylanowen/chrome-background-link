@@ -1,11 +1,12 @@
 /// <reference path="../../external_types/chrome/chrome.d.ts"/>
 
+/// <reference path="../../global/Global.ts"/>
 /// <reference path="../../global/Debug.ts"/>
 
 /// <reference path="../../global/network/NetworkPacket.ts"/>
 
 
-namespace bl { export namespace network {
+namespace bl {
     export class ClientNetworkHandler {
         private extensionId: string;
         private port: chrome.runtime.Port = null;
@@ -62,7 +63,7 @@ namespace bl { export namespace network {
                     receivedStatus = true;
 
                     try {
-                        const {clientId, version} = (<InitialPacket>JSON.parse(message)).data;
+                        const {clientId, version} = (<network.InitialPacket>JSON.parse(message)).data;
                         this.clientId = clientId;
                         this.version = version;
 
@@ -104,9 +105,24 @@ namespace bl { export namespace network {
             this.clientId = -1;
         }
 
+        sendMessage<T>(path: string, message: Serializable): void {
+            if (this.port != null) {
+                const packet: network.Packet = {
+                    path: path,
+                    data: message
+                }
+
+                debug.log('Sending Message', message);
+                this.port.postMessage(JSON.stringify(packet));
+            }
+            else {
+                throw new Error('implement a message queue');
+            }
+        }
+
         private messageListener(rawResponse: string): void {
             try {
-                let response: Packet = JSON.parse(rawResponse);
+                let response: network.Packet = JSON.parse(rawResponse);
 
                 console.log(response);
             }
@@ -119,7 +135,7 @@ namespace bl { export namespace network {
             //return this.connectionHandler.handleMessage(request);
         }
     }
-} }
+}
 
 /*
 ###*

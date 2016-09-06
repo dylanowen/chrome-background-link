@@ -1,8 +1,10 @@
+/// <reference path="../Global.ts"/>
+
 namespace bl { export namespace network {
 
     export interface Packet {
         path: string;
-        data: Object;
+        data: Serializable;
     }
 
     export interface InitialPacket extends Packet {
@@ -14,7 +16,6 @@ namespace bl { export namespace network {
 
     // reserved connection paths
     export const INITIAL_PATH: string = 'initial';
-    export const ERROR_PATH: string = 'error';
 
     export function InitialPacket(clientId: number): InitialPacket {
         return {

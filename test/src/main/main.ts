@@ -3,7 +3,8 @@
 /// <reference path="../lib/bl-client.d.ts"/>
 
 bl.setLogLevel(bl.LogLevel.LOG);
-let network = new bl.Network();
+const network = bl.CreateDefaultClient();
+const logger = new bl.LoggingApplication(network);
 
 function documentReady(): Promise<void> {
     return new Promise<void>((resolve: () => void) => {
@@ -25,6 +26,7 @@ function documentReady(): Promise<void> {
 Promise.all<void>([network.ready(), documentReady()])
     .then(() => {
         bl.debug.log('ready');
+        logger.log('ready');
     })
     .catch((error) => {
         console.error('Error initializing: ', error)

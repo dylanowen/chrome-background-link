@@ -5,7 +5,11 @@
 
 
 namespace bl {
-    export const Network = network.ClientNetworkHandler;
+    export function CreateDefaultClient(extensionId: string = chrome.runtime.id): ClientNetworkHandler {
+        const client = new ClientNetworkHandler(extensionId);
+
+        return client;
+    }
 }
 
 

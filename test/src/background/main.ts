@@ -3,7 +3,7 @@
 /// <reference path="../types/TestObject.d.ts"/>
 
 bl.setLogLevel(bl.LogLevel.LOG);
-const network = new bl.Network();
+const network = bl.CreateDefaultServer();
 
 /*
 CBL.setLogLevel(CBL.LogLevel.LOG);

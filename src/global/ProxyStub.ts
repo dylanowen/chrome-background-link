@@ -1,4 +1,4 @@
-namespace CBL {
+namespace bl {
     function throwProxyStubError(...args: any[]): Promise<any> { 
         throw new Error("Did not forward function call correctly");
     }

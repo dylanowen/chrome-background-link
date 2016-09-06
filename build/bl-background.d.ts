@@ -1,10 +1,28 @@
-type Connection = (message: Object) => void;
-type Broadcast = (response: Object) => void;
-
-interface Application {
-    connectionEvent(connection: Connection): Promise<Object>;
-    messageEvent<T>(message: T): Promise<Object>;
-}declare namespace bl {
+declare namespace bl {
+    type Connection = (message: Object) => void;
+    type Broadcast = (response: Object) => void;
+    interface Application {
+        setBroadcast(broadcast: Broadcast): void;
+        connectionEvent(): Promise<Object>;
+        messageEvent<T>(message: T): Promise<Object>;
+    }
+}
+declare namespace bl {
+    class ErrorApplication implements Application {
+        static PATH: string;
+        setBroadcast(broadcast: Broadcast): void;
+        connectionEvent(): Promise<Object>;
+        messageEvent<T>(message: T): Promise<Object>;
+    }
+}
+declare namespace bl {
+    class LoggingApplication implements Application {
+        setBroadcast(broadcast: Broadcast): void;
+        connectionEvent(): Promise<Object>;
+        messageEvent<T>(message: T): Promise<Object>;
+    }
+}
+declare namespace bl {
     enum LogLevel {
         LOG = 0,
         WARN = 1,
@@ -19,10 +37,14 @@ interface Application {
     function setLogLevel(logLevel: LogLevel): void;
 }
 declare namespace bl {
+    type SimpleSerializable = boolean | number | string | Object;
+    type Serializable = SimpleSerializable | SimpleSerializable[];
+}
+declare namespace bl {
     namespace network {
         interface Packet {
             path: string;
-            data: Object;
+            data: Serializable;
         }
         interface InitialPacket extends Packet {
             data: {
@@ -31,31 +53,32 @@ declare namespace bl {
             };
         }
         const INITIAL_PATH: string;
-        const ERROR_PATH: string;
         function InitialPacket(clientId: number): InitialPacket;
     }
 }
 declare namespace bl {
-    namespace network {
-        class ServerNetworkHandler {
-            private whitelist;
-            private clientIdIncrementer;
-            private connections;
-            private oneOffApplications;
-            private applications;
-            constructor(whitelist?: string[]);
-            registerApplication(path: string, application: Application, persistentOnly?: boolean): Broadcast;
-            handlePacket(rawRequest: string, fromPersistent?: boolean): Promise<Packet>;
-            broadcast(path: string, response: Object): void;
-            private externalConnectionListener(chromePort);
-            private connectionListener(chromePort);
-            private disconnectListener(id);
-            private externalMessageListener(requestMessage, sender, sendResponse);
-            private messageListener(rawRequest, sender, sendResponse);
-            private validateConnection(sender);
-        }
+    class ServerNetworkHandler {
+        private whitelist;
+        private clientIdIncrementer;
+        private connections;
+        private oneOffApplications;
+        private applications;
+        private errorApplication;
+        constructor(whitelist?: string[]);
+        registerApplication(path: string, application: Application, persistentOnly?: boolean): void;
+        handlePacket(rawRequest: string, fromPersistent?: boolean): Promise<network.Packet>;
+        broadcast(path: string, response: Object): void;
+        private externalConnectionListener(chromePort);
+        private connectionListener(chromePort);
+        private disconnectListener(id);
+        private externalMessageListener(requestMessage, sender, sendResponse);
+        private messageListener(rawRequest, sender, sendResponse);
+        private validateConnection(sender);
     }
 }
 declare namespace bl {
-    const Network: typeof network.ServerNetworkHandler;
+    const LOGGING_PATH: string;
+}
+declare namespace bl {
+    function CreateDefaultServer(whitelist?: string[]): ServerNetworkHandler;
 }

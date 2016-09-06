@@ -1,4 +1,8 @@
 declare namespace bl {
+    type SimpleSerializable = boolean | number | string | Object;
+    type Serializable = SimpleSerializable | SimpleSerializable[];
+}
+declare namespace bl {
     enum LogLevel {
         LOG = 0,
         WARN = 1,
@@ -12,13 +16,14 @@ declare namespace bl {
     };
     function setLogLevel(logLevel: LogLevel): void;
 }
-declare namespace CBL {
+declare namespace bl {
+    const LOGGING_PATH: string;
 }
 declare namespace bl {
     namespace network {
         interface Packet {
             path: string;
-            data: Object;
+            data: Serializable;
         }
         interface InitialPacket extends Packet {
             data: {
@@ -27,34 +32,34 @@ declare namespace bl {
             };
         }
         const INITIAL_PATH: string;
-        const ERROR_PATH: string;
         function InitialPacket(clientId: number): InitialPacket;
     }
 }
 declare namespace bl {
-    namespace network {
-        class ClientNetworkHandler {
-            private extensionId;
-            private port;
-            private clientId;
-            private messageIdIncrementer;
-            private readyPromise;
-            version: string;
-            constructor(extensionId?: string);
-            ready(): Promise<void>;
-            reconnect(): Promise<void>;
-            disconnect(): void;
-            private messageListener(rawResponse);
-        }
+    class ClientNetworkHandler {
+        private extensionId;
+        private port;
+        private clientId;
+        private messageIdIncrementer;
+        private readyPromise;
+        version: string;
+        constructor(extensionId?: string);
+        ready(): Promise<void>;
+        reconnect(): Promise<void>;
+        disconnect(): void;
+        sendMessage<T>(path: string, message: Object | Object[]): void;
+        private messageListener(rawResponse);
     }
 }
 declare namespace bl {
-    const Network: typeof network.ClientNetworkHandler;
+    class LoggingApplication {
+        private client;
+        constructor(client: ClientNetworkHandler);
+        log(...parms: Serializable[]): void;
+    }
 }
-type Connection = (message: Object) => void;
-type Broadcast = (response: Object) => void;
-
-interface Application {
-    connectionEvent(connection: Connection): Promise<Object>;
-    messageEvent<T>(message: T): Promise<Object>;
+declare namespace bl {
+}
+declare namespace bl {
+    function CreateDefaultClient(extensionId?: string): ClientNetworkHandler;
 }
