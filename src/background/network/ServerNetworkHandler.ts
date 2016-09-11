@@ -122,15 +122,9 @@ namespace bl {
             try {
                 const response: Promise<Serializable> = application.messageEvent(request.data);
 
-                if (response != null) {
-                    return response.then((result: Serializable): network.Packet => {
-                        return {
-                            path: path,
-                            data: result
-                        };
-                    }).catch((error: string): network.Packet => {
-                        return createErrorPacket(error);
-                    });
+                if (response !== null) {
+                    return response.then(createPacket.bind(null, path))
+                        .catch(createErrorPacket);
                 }
 
                 return null;
@@ -143,10 +137,7 @@ namespace bl {
         }
 
         broadcast(path: string, response: Serializable): void {
-            const packet = {
-                path: path,
-                data: response
-            };
+            const packet = createPacket(path, response);
 
             for (const connection of this.connections.values()) {
                 connection.postPacket(packet);
@@ -164,23 +155,20 @@ namespace bl {
 
             const connection = new PersistentConnection(chromePort, id, this);
 
-            const postMessage = (connection: PersistentConnection, path: string, response: Serializable): void => {
-                const packet: network.Packet = {
-                    path: path,
-                    data: response
-                };
-
-                connection.postPacket(packet);
-            };
-
             this.connections.set(id, connection);
 
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
 
             for (const [path, application] of this.applications) {
                 // let our application know about the open connectsions
-                //TODO this isn't really the model I was going for, why does the application need to know about each connection? I don't want applications tracking that themselves
-                application.connectionEvent(postMessage.bind(this, connection, path));
+                const connectionSetup: Promise<Serializable> = application.connectionEvent();
+
+                //check if we have anything to send
+                if (connectionSetup !== null) {
+                    connectionSetup.then(createPacket.bind(null, path))
+                        .catch(createErrorPacket)
+                        .then(connection.postPacket);
+                }
             }
         }
 
@@ -224,11 +212,15 @@ namespace bl {
         }
     }
 
-    function createErrorPacket(message: Object): network.Packet {
+    function createPacket(path: string, message: Serializable): network.Packet {
         return {
-            path: ErrorApplication.PATH,
+            path: path,
             data: message
         };
+    }
+
+    function createErrorPacket(message: Serializable): network.Packet {
+        return createPacket(ErrorApplication.PATH, message);
     }
 }
 

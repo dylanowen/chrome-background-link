@@ -3,6 +3,7 @@
 var gulp = require('gulp');
 var ts = require('gulp-typescript');
 var watch = require('gulp-watch');
+var file = require('gulp-file');
 var runSequence = require('run-sequence');
 var del = require('del');
 var fs = require('fs');
@@ -20,12 +21,28 @@ var config = {
         buildDest: './test/build/',
         prefix: 'js/'
     },
-    ts: JSON.parse(fs.readFileSync('./tsconfig.json')).compilerOptions
+    ts: {
+        noImplicitAny: true,
+        target: "es6",
+        removeComments: true,
+        preserveConstEnums: true
+    }
 };
 
 gulp.task('clean', function(cb) {
     return del([config.main.buildDest + '*', config.test.buildDest + '*']);
 });
+
+// save our master typescript config to all tsconfig.json files
+gulp.task('setup:typescript', function() {
+    var tsConfig = {
+        compilerOptions: config.ts
+    };
+
+    gulp.src('./**/tsconfig.json')
+        .pipe(file('tsconfig.json', tsConfig))
+        .pipe(gulp.dest('./'));
+})
 
 function typescript(configFolders, outputName, cb) {
     var tsConfig = config.ts;
@@ -72,6 +89,9 @@ const mainTypescript = function(outputName, cb) {
     typescript(config.main, outputName, resolve);
     declaration(config.main, outputName, resolve);
 }
+
+// setup typescript configs
+
 
 //main build
 gulp.task('build:compile:background', mainTypescript.bind(null, 'background'));

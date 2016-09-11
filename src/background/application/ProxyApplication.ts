@@ -2,12 +2,21 @@
 
 namespace bl {
     export class ProxyApplication implements Application {
-        setBroadcast(broadcast: Broadcast): void {
-            // we don't care about broadcasting
-        } 
+        private broadcast: Broadcast = null;
 
-        connectionEvent(postMessage: PostMessage): void {
-            // we don't care about new connections
+        private proxies: Map<string, any> = new Map();
+
+        registerProxy(key: string, obj: any): any {
+            
+        }
+
+        setBroadcast(broadcast: Broadcast): void {
+            this.broadcast = broadcast;
+        }
+
+        connectionEvent(): Promise<Serializable> {
+            // we do care about new connections
+            return null;
         }
 
         messageEvent(message: Serializable): Promise<Object> {

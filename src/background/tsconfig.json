@@ -4,11 +4,5 @@
         "target": "es6",
         "removeComments": true,
         "preserveConstEnums": true
-    },
-    "exclude": [
-        "node_modules",
-        "build",
-        "test/build",
-        "test/src/lib"
-    ]
+    }
 }

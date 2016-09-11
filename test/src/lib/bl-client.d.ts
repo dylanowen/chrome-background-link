@@ -77,6 +77,14 @@ declare namespace bl {
     }
 }
 declare namespace bl {
+    function ProxyStub<T extends (...args: any[]) => Promise<any>>(): T;
+    interface ProxyHandler {
+        (key: string | number | symbol, ...args: any[]): Promise<any>;
+    }
+    function injectHandler<T>(obj: T, handler: ProxyHandler): {
+        proxy: T;
+        revoke: () => void;
+    };
 }
 declare namespace bl {
     function CreateDefaultClient(extensionId?: string): [ClientNetworkHandler, LoggingApplication, ProxyApplication];

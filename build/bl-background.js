@@ -56,7 +56,8 @@ var bl;
     class ErrorApplication {
         setBroadcast(broadcast) {
         }
-        connectionEvent(postMessage) {
+        connectionEvent() {
+            return null;
         }
         messageEvent(message) {
             bl.debug.error(message);
@@ -143,15 +144,9 @@ var bl;
             }
             try {
                 const response = application.messageEvent(request.data);
-                if (response != null) {
-                    return response.then((result) => {
-                        return {
-                            path: path,
-                            data: result
-                        };
-                    }).catch((error) => {
-                        return createErrorPacket(error);
-                    });
+                if (response !== null) {
+                    return response.then(createPacket.bind(null, path))
+                        .catch(createErrorPacket);
                 }
                 return null;
             }
@@ -161,10 +156,7 @@ var bl;
             }
         }
         broadcast(path, response) {
-            const packet = {
-                path: path,
-                data: response
-            };
+            const packet = createPacket(path, response);
             for (const connection of this.connections.values()) {
                 connection.postPacket(packet);
             }
@@ -176,17 +168,15 @@ var bl;
         connectionListener(chromePort) {
             const id = this.clientIdIncrementer++;
             const connection = new PersistentConnection(chromePort, id, this);
-            const postMessage = (connection, path, response) => {
-                const packet = {
-                    path: path,
-                    data: response
-                };
-                connection.postPacket(packet);
-            };
             this.connections.set(id, connection);
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
             for (const [path, application] of this.applications) {
-                application.connectionEvent(postMessage.bind(this, connection, path));
+                const connectionSetup = application.connectionEvent();
+                if (connectionSetup !== null) {
+                    connectionSetup.then(createPacket.bind(null, path))
+                        .catch(createErrorPacket)
+                        .then(connection.postPacket);
+                }
             }
         }
         disconnectListener(id) {
@@ -219,11 +209,14 @@ var bl;
         }
     }
     bl.ServerNetworkHandler = ServerNetworkHandler;
-    function createErrorPacket(message) {
+    function createPacket(path, message) {
         return {
-            path: bl.ErrorApplication.PATH,
+            path: path,
             data: message
         };
+    }
+    function createErrorPacket(message) {
+        return createPacket(bl.ErrorApplication.PATH, message);
     }
 })(bl || (bl = {}));
 var bl;
@@ -236,7 +229,8 @@ var bl;
     class LoggingApplication {
         setBroadcast(broadcast) {
         }
-        connectionEvent(postMessage) {
+        connectionEvent() {
+            return null;
         }
         messageEvent(message) {
             if (message instanceof Array) {
@@ -253,9 +247,17 @@ var bl;
 var bl;
 (function (bl) {
     class ProxyApplication {
-        setBroadcast(broadcast) {
+        constructor() {
+            this.broadcast = null;
+            this.proxies = new Map();
         }
-        connectionEvent(postMessage) {
+        registerProxy(key, obj) {
+        }
+        setBroadcast(broadcast) {
+            this.broadcast = broadcast;
+        }
+        connectionEvent() {
+            return null;
         }
         messageEvent(message) {
             if (message instanceof Array) {

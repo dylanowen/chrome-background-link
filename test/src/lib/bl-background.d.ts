@@ -3,11 +3,10 @@ declare namespace bl {
     type Serializable = SimpleSerializable | SimpleSerializable[];
 }
 declare namespace bl {
-    type PostMessage = (message: Serializable) => void;
     type Broadcast = (response: Serializable) => void;
     interface Application {
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(postMessage: PostMessage): void;
+        connectionEvent(): Promise<Serializable>;
         messageEvent(message: Serializable): Promise<Serializable>;
     }
 }
@@ -15,21 +14,24 @@ declare namespace bl {
     class ErrorApplication implements Application {
         static PATH: string;
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(postMessage: PostMessage): void;
+        connectionEvent(): Promise<Serializable>;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
     class LoggingApplication implements Application {
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(postMessage: PostMessage): void;
+        connectionEvent(): Promise<Serializable>;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
     class ProxyApplication implements Application {
+        private broadcast;
+        private proxies;
+        registerProxy(key: string, obj: any): any;
         setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(postMessage: PostMessage): void;
+        connectionEvent(): Promise<Serializable>;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }

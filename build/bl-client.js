@@ -42,22 +42,20 @@ var bl;
     function ProxyStub() {
         return throwProxyStubError;
     }
-    var ProxyStub;
-    (function (ProxyStub) {
-        function injectHandler(obj, handler) {
-            handler = handler.bind(null, obj);
-            return Proxy.revocable(obj, {
-                get: (target, key) => {
-                    const value = Reflect.get(target, key);
-                    if (value === throwProxyStubError) {
-                        return handler.bind(null, key);
-                    }
-                    return value;
+    bl.ProxyStub = ProxyStub;
+    function injectHandler(obj, handler) {
+        handler = handler.bind(null, obj);
+        return Proxy.revocable(obj, {
+            get: (target, key) => {
+                const value = Reflect.get(target, key);
+                if (value === throwProxyStubError) {
+                    return handler.bind(null, key);
                 }
-            });
-        }
-        ProxyStub.injectHandler = injectHandler;
-    })(ProxyStub || (ProxyStub = {}));
+                return value;
+            }
+        });
+    }
+    bl.injectHandler = injectHandler;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
