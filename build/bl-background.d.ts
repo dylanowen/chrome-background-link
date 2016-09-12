@@ -1,37 +1,87 @@
 declare namespace bl {
     type SimpleSerializable = boolean | number | string | Object;
     type Serializable = SimpleSerializable | SimpleSerializable[];
+    type ProxyProperty = string | number | symbol;
 }
 declare namespace bl {
-    type Broadcast = (response: Serializable) => void;
+    type BroadcastFunction = (message: Serializable) => void;
     interface Application {
-        setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Serializable>;
+        connectionEvent(): Promise<Serializable[]>;
         messageEvent(message: Serializable): Promise<Serializable>;
+        setBroadcast(broadcastFunc: BroadcastFunction): void;
+    }
+    abstract class ApplicationImpl implements Application {
+        private broadcastFunc;
+        connectionEvent(): Promise<Serializable[]>;
+        messageEvent(message: Serializable): Promise<Serializable>;
+        broadcast(message: Serializable): void;
+        setBroadcast(broadcastFunc: BroadcastFunction): void;
     }
 }
 declare namespace bl {
-    class ErrorApplication implements Application {
+    class ErrorApplication extends ApplicationImpl {
         static PATH: string;
-        setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Serializable>;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
-    class LoggingApplication implements Application {
-        setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Serializable>;
+    class LoggingApplication extends ApplicationImpl {
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
 declare namespace bl {
-    class ProxyApplication implements Application {
-        private broadcast;
+    namespace proxy {
+        const PATH: string;
+        enum Type {
+            PROXY_CREATE = 0,
+            PROXY_UPDATE = 1,
+            PROXY_DELETE = 2,
+        }
+        interface ProxyMessage {
+            type: Type;
+            id: number;
+        }
+        type ProxyDelete = ProxyMessage;
+        interface ProxyUpdate extends ProxyMessage {
+            data: Object;
+        }
+        interface ProxyCreate extends ProxyUpdate {
+            key: string;
+        }
+    }
+}
+declare namespace bl {
+    class ProxyApplication extends ApplicationImpl {
         private proxies;
-        registerProxy(key: string, obj: any): any;
-        setBroadcast(broadcast: Broadcast): void;
-        connectionEvent(): Promise<Serializable>;
+        private proxyId;
+        registerProxy<T>(key: string | (new (...args: any[]) => T), clazz?: new (...args: any[]) => T): new (...args: any[]) => T;
+        private constructProxy<T>(key, target, argumentsList, newTarget);
+        private setProxy<T>(id, target, property, value, receiver);
+        private deleteProxy<T>(id, target, property);
+        /**\
+        registerProxy<T>(key: string | any, obj: T): any {
+            if (typeof key !== 'string' && !(key instanceof String)) {
+                obj = key;
+                key = obj.constructor.name;
+            }
+
+            const proxy = new Proxy<T>(obj, {
+                set: (target: T, property: ProxyProperty, value: Serializable, receiver: any): boolean => {
+                    const result = Reflect.set(target, property, value, receiver);
+
+
+
+                    return result;
+                },
+                deleteProperty: (target: T, property: ProxyProperty): boolean => {
+
+                }
+            });
+
+            this.proxies.set(key, obj);
+        }
+        */
+        connectionEvent(): Promise<Serializable[]>;
         messageEvent(message: Serializable): Promise<Object>;
     }
 }
@@ -73,7 +123,7 @@ declare namespace bl {
         private clientIdIncrementer;
         private connections;
         private oneOffApplications;
-        private applications;
+        private persistentApplications;
         private errorApplication;
         constructor(whitelist?: string[]);
         registerApplication(path: string, application: Application, persistentOnly?: boolean): void;
@@ -88,9 +138,10 @@ declare namespace bl {
     }
 }
 declare namespace bl {
-    const LOGGING_PATH: string;
-    const PROXY_PATH: string;
+    namespace logging {
+        const PATH: string;
+    }
 }
 declare namespace bl {
-    function CreateDefaultServer(whitelist?: string[]): ServerNetworkHandler;
+    function CreateDefaultServer(whitelist?: string[]): [ServerNetworkHandler, ProxyApplication];
 }

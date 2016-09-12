@@ -3,17 +3,20 @@
 /// <reference path="../global/network/NetworkPacket.ts"/>
 /// <reference path="network/ServerNetworkHandler.ts"/>
 
-/// <reference path="../global/application/Api.ts"/>
+/// <reference path="../global/application/LoggingApi.ts"/>
+/// <reference path="../global/application/ProxyApi.ts"/>
 /// <reference path="application/LoggingApplication.ts"/>
 /// <reference path="application/ProxyApplication.ts"/>
 
 namespace bl {
-    export function CreateDefaultServer(whitelist: string[] = []): ServerNetworkHandler {
+    export function CreateDefaultServer(whitelist: string[] = []): [ServerNetworkHandler, ProxyApplication] {
         const server = new ServerNetworkHandler(whitelist);
 
-        server.registerApplication(LOGGING_PATH, new LoggingApplication());
-        server.registerApplication(PROXY_PATH, new ProxyApplication());
+        server.registerApplication(logging.PATH, new LoggingApplication());
 
-        return server;
+        const proxyApplication = new ProxyApplication();
+        server.registerApplication(proxy.PATH, proxyApplication);
+
+        return [server, proxyApplication];
     }
 }

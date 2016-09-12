@@ -32,6 +32,8 @@ namespace bl {
         }
 
         handlePacket(rawRequest: string): void {
+            debug.verbose("Receieved Persistent Message: ", rawRequest, this.clientId);
+
             const response: Promise<network.Packet> = this.networkHandler.handlePacket(rawRequest);
 
             // check if we have something to respond with
@@ -67,8 +69,10 @@ namespace bl {
         private clientIdIncrementer: number = 1;
 
         private connections: Map<number, PersistentConnection> = new Map();
+        // applications that support messages vs long running connections
         private oneOffApplications: Map<string, Application> = new Map();
-        private applications: Map<string, Application> = new Map();
+        // applications that run on persistent connections
+        private persistentApplications: Map<string, Application> = new Map();
         private errorApplication: Application = new ErrorApplication();
 
         //default to only the current extension
@@ -87,10 +91,11 @@ namespace bl {
 
         registerApplication(path: string, application: Application, persistentOnly: boolean = false): void {
             if (!persistentOnly) {
-                this.oneOffApplications.set(path, application);
+                this.oneOffApplications.set(path, application);   
             }
 
-            this.applications.set(path, application);
+            // if something isn't persistentOnly it still supports persistent connections
+            this.persistentApplications.set(path, application);
 
             application.setBroadcast(this.broadcast.bind(this, path));
         }
@@ -107,13 +112,17 @@ namespace bl {
 
             const path: string = request.path;
             let application: Application = null;
-            if (!fromPersistent && this.oneOffApplications.has(path)) {
-                application = this.oneOffApplications.get(path);
+            if (!fromPersistent) {
+                if (this.oneOffApplications.has(path)) {
+                    application = this.oneOffApplications.get(path);
+                }
             }
-            else if (this.applications.has(path)) {
-                application = this.applications.get(path);
+            else if (this.persistentApplications.has(path)) {
+                application = this.persistentApplications.get(path);
             }
-            else {
+
+            // check if we found an application
+            if (application == null) {
                 // if we can't find an application use our ErrorApplication
                 request = createErrorPacket('Failed to find the application at: ' + path);
                 application = this.errorApplication;
@@ -159,15 +168,23 @@ namespace bl {
 
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
 
-            for (const [path, application] of this.applications) {
+            for (const [path, application] of this.persistentApplications) {
                 // let our application know about the open connectsions
-                const connectionSetup: Promise<Serializable> = application.connectionEvent();
+                const connectionSetup: Promise<Serializable[]> = application.connectionEvent();
 
                 //check if we have anything to send
                 if (connectionSetup !== null) {
-                    connectionSetup.then(createPacket.bind(null, path))
-                        .catch(createErrorPacket)
-                        .then(connection.postPacket);
+                    const postPacket = connection.postPacket.bind(connection);
+
+                    connectionSetup.then((messages: Serializable[]) => {
+                            return messages.map(createPacket.bind(null, path));
+                        })
+                        .catch((error) => {
+                            return [createErrorPacket(error)];
+                        })
+                        .then((packets: network.Packet[]) => {
+                            packets.forEach(postPacket);
+                        });
                 }
             }
         }
@@ -185,7 +202,9 @@ namespace bl {
         }
 
         private messageListener(rawRequest: string, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void): boolean {
-            const response: Promise<network.Packet> = this.handlePacket(rawRequest);
+            debug.verbose("Receieved One Off Message: ", rawRequest);
+
+            const response: Promise<network.Packet> = this.handlePacket(rawRequest, false);
 
             // check if we need to hold the connection open
             if (response !== null) {

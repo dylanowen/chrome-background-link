@@ -1,22 +1,23 @@
 /// <reference path="../global/Debug.ts"/>
 /// <reference path="../global/ProxyStub.ts"/>
-/// <reference path="../global/application/Api.ts"/>
 
 /// <reference path="network/ClientNetworkHandler.ts"/>
 
+/// <reference path="../global/application/LoggingApi.ts"/>
 /// <reference path="application/LoggingApplication.ts"/>
+/// <reference path="../global/application/ProxyApi.ts"/>
 /// <reference path="application/ProxyApplication.ts"/>
 
 namespace bl {
     export function CreateDefaultClient(extensionId: string = chrome.runtime.id): [ClientNetworkHandler, LoggingApplication, ProxyApplication] {
         const client = new ClientNetworkHandler(extensionId);
-        const logging = new LoggingApplication(client);
-        const proxy = new ProxyApplication(client);
+        const loggingApplication = new LoggingApplication();
+        const proxyApplication = new ProxyApplication();
 
-        client.registerApplication(LOGGING_PATH, logging);
-        client.registerApplication(PROXY_PATH, proxy);
+        client.registerApplication(logging.PATH, loggingApplication);
+        client.registerApplication(proxy.PATH, proxyApplication);
 
-        return [client, logging, proxy];
+        return [client, loggingApplication, proxyApplication];
     }
 }
 

@@ -53,12 +53,28 @@ var bl;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    class ErrorApplication {
-        setBroadcast(broadcast) {
+    class ApplicationImpl {
+        constructor() {
+            this.broadcastFunc = null;
         }
         connectionEvent() {
             return null;
         }
+        messageEvent(message) {
+            return null;
+        }
+        broadcast(message) {
+            this.broadcastFunc(message);
+        }
+        setBroadcast(broadcastFunc) {
+            this.broadcastFunc = broadcastFunc;
+        }
+    }
+    bl.ApplicationImpl = ApplicationImpl;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class ErrorApplication extends bl.ApplicationImpl {
         messageEvent(message) {
             bl.debug.error(message);
             return Promise.resolve(message);
@@ -81,6 +97,7 @@ var bl;
             this.chromePort.onMessage.addListener(this.handlePacket.bind(this));
         }
         handlePacket(rawRequest) {
+            bl.debug.verbose("Receieved Persistent Message: ", rawRequest, this.clientId);
             const response = this.networkHandler.handlePacket(rawRequest);
             if (response !== null) {
                 response.then((packet) => {
@@ -106,7 +123,7 @@ var bl;
             this.clientIdIncrementer = 1;
             this.connections = new Map();
             this.oneOffApplications = new Map();
-            this.applications = new Map();
+            this.persistentApplications = new Map();
             this.errorApplication = new bl.ErrorApplication();
             this.whitelist = whitelist;
             this.registerApplication(bl.ErrorApplication.PATH, this.errorApplication);
@@ -119,7 +136,7 @@ var bl;
             if (!persistentOnly) {
                 this.oneOffApplications.set(path, application);
             }
-            this.applications.set(path, application);
+            this.persistentApplications.set(path, application);
             application.setBroadcast(this.broadcast.bind(this, path));
         }
         handlePacket(rawRequest, fromPersistent = true) {
@@ -132,13 +149,15 @@ var bl;
             }
             const path = request.path;
             let application = null;
-            if (!fromPersistent && this.oneOffApplications.has(path)) {
-                application = this.oneOffApplications.get(path);
+            if (!fromPersistent) {
+                if (this.oneOffApplications.has(path)) {
+                    application = this.oneOffApplications.get(path);
+                }
             }
-            else if (this.applications.has(path)) {
-                application = this.applications.get(path);
+            else if (this.persistentApplications.has(path)) {
+                application = this.persistentApplications.get(path);
             }
-            else {
+            if (application == null) {
                 request = createErrorPacket('Failed to find the application at: ' + path);
                 application = this.errorApplication;
             }
@@ -170,12 +189,19 @@ var bl;
             const connection = new PersistentConnection(chromePort, id, this);
             this.connections.set(id, connection);
             chromePort.onDisconnect.addListener(this.disconnectListener.bind(this, id));
-            for (const [path, application] of this.applications) {
+            for (const [path, application] of this.persistentApplications) {
                 const connectionSetup = application.connectionEvent();
                 if (connectionSetup !== null) {
-                    connectionSetup.then(createPacket.bind(null, path))
-                        .catch(createErrorPacket)
-                        .then(connection.postPacket);
+                    const postPacket = connection.postPacket.bind(connection);
+                    connectionSetup.then((messages) => {
+                        return messages.map(createPacket.bind(null, path));
+                    })
+                        .catch((error) => {
+                        return [createErrorPacket(error)];
+                    })
+                        .then((packets) => {
+                        packets.forEach(postPacket);
+                    });
                 }
             }
         }
@@ -188,7 +214,8 @@ var bl;
             return this.messageListener(requestMessage, sender, sendResponse);
         }
         messageListener(rawRequest, sender, sendResponse) {
-            const response = this.handlePacket(rawRequest);
+            bl.debug.verbose("Receieved One Off Message: ", rawRequest);
+            const response = this.handlePacket(rawRequest, false);
             if (response !== null) {
                 response.then((packet) => {
                     sendResponse(JSON.stringify(packet));
@@ -221,17 +248,27 @@ var bl;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    bl.LOGGING_PATH = 'log';
-    bl.PROXY_PATH = 'proxy';
+    var logging;
+    (function (logging) {
+        logging.PATH = 'log';
+    })(logging = bl.logging || (bl.logging = {}));
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    class LoggingApplication {
-        setBroadcast(broadcast) {
-        }
-        connectionEvent() {
-            return null;
-        }
+    var proxy;
+    (function (proxy) {
+        proxy.PATH = 'proxy';
+        (function (Type) {
+            Type[Type["PROXY_CREATE"] = 0] = "PROXY_CREATE";
+            Type[Type["PROXY_UPDATE"] = 1] = "PROXY_UPDATE";
+            Type[Type["PROXY_DELETE"] = 2] = "PROXY_DELETE";
+        })(proxy.Type || (proxy.Type = {}));
+        var Type = proxy.Type;
+    })(proxy = bl.proxy || (bl.proxy = {}));
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class LoggingApplication extends bl.ApplicationImpl {
         messageEvent(message) {
             if (message instanceof Array) {
                 bl.debug.log.apply(null, message);
@@ -246,26 +283,73 @@ var bl;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    class ProxyApplication {
-        constructor() {
-            this.broadcast = null;
+    class ProxyApplication extends bl.ApplicationImpl {
+        constructor(...args) {
+            super(...args);
             this.proxies = new Map();
+            this.proxyId = 1;
         }
-        registerProxy(key, obj) {
+        registerProxy(key, clazz) {
+            if (typeof key !== 'string' && !(key instanceof String)) {
+                clazz = key;
+                key = clazz.name;
+            }
+            const proxy = new Proxy(clazz, {
+                construct: this.constructProxy.bind(this, key)
+            });
+            return proxy;
         }
-        setBroadcast(broadcast) {
-            this.broadcast = broadcast;
+        constructProxy(key, target, argumentsList, newTarget) {
+            const realInstance = Reflect.construct(target, argumentsList, newTarget);
+            const id = this.proxyId++;
+            this.proxies.set(id, {
+                key: key,
+                obj: realInstance
+            });
+            this.broadcast({
+                type: bl.proxy.Type.PROXY_CREATE,
+                key: key,
+                id: id,
+                data: realInstance
+            });
+            const proxyInstance = new Proxy(realInstance, {
+                set: this.setProxy.bind(this, id),
+                deleteProperty: this.deleteProxy.bind(this, id)
+            });
+            return proxyInstance;
+        }
+        setProxy(id, target, property, value, receiver) {
+            const delta = {};
+            delta[property] = value;
+            const updateMessage = {
+                type: bl.proxy.Type.PROXY_UPDATE,
+                id: id,
+                data: delta
+            };
+            this.broadcast(updateMessage);
+            return Reflect.set(target, property, value, receiver);
+        }
+        deleteProxy(id, target, property) {
+            this.broadcast({
+                type: bl.proxy.Type.PROXY_DELETE,
+                id: id
+            });
+            this.proxies.delete(id);
+            return Reflect.deleteProperty(target, property);
         }
         connectionEvent() {
-            return null;
+            const proxyCreates = [];
+            for (let [id, proxyRef] of this.proxies.entries()) {
+                proxyCreates.push({
+                    type: bl.proxy.Type.PROXY_CREATE,
+                    key: proxyRef.key,
+                    id: id,
+                    data: proxyRef.obj
+                });
+            }
+            return Promise.resolve(proxyCreates);
         }
         messageEvent(message) {
-            if (message instanceof Array) {
-                bl.debug.log.apply(null, message);
-            }
-            else {
-                bl.debug.log(message);
-            }
             return null;
         }
     }
@@ -275,9 +359,10 @@ var bl;
 (function (bl) {
     function CreateDefaultServer(whitelist = []) {
         const server = new bl.ServerNetworkHandler(whitelist);
-        server.registerApplication(bl.LOGGING_PATH, new bl.LoggingApplication());
-        server.registerApplication(bl.PROXY_PATH, new bl.ProxyApplication());
-        return server;
+        server.registerApplication(bl.logging.PATH, new bl.LoggingApplication());
+        const proxyApplication = new bl.ProxyApplication();
+        server.registerApplication(bl.proxy.PATH, proxyApplication);
+        return [server, proxyApplication];
     }
     bl.CreateDefaultServer = CreateDefaultServer;
 })(bl || (bl = {}));

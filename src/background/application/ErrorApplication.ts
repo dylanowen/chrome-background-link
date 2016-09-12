@@ -6,17 +6,8 @@
 A very basic application that logs client side errors
 */
 namespace bl {
-    export class ErrorApplication implements Application {
+    export class ErrorApplication extends ApplicationImpl {
         static PATH: string = 'error';
-
-        setBroadcast(broadcast: Broadcast): void {
-            // we don't care about broadcasting
-        } 
-
-        connectionEvent(): Promise<Serializable> {
-            // we don't care about new connections
-            return null;
-        }
 
         messageEvent(message: Serializable): Promise<Object> {
             debug.error(message);

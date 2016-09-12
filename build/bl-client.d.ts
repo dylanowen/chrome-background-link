@@ -1,11 +1,20 @@
 declare namespace bl {
+    type SendMessage = (response: Serializable) => void;
     interface Application {
+        setSendMessage(sendMessageFunc: SendMessage): void;
+        messageEvent(message: Serializable): void;
+    }
+    abstract class ApplicationImpl implements Application {
+        private sendMessageFunc;
+        setSendMessage(sendMessageFunc: SendMessage): void;
+        protected sendMessage(message: Serializable): void;
         messageEvent(message: Serializable): void;
     }
 }
 declare namespace bl {
     type SimpleSerializable = boolean | number | string | Object;
     type Serializable = SimpleSerializable | SimpleSerializable[];
+    type ProxyProperty = string | number | symbol;
 }
 declare namespace bl {
     enum LogLevel {
@@ -24,8 +33,54 @@ declare namespace bl {
     function setLogLevel(logLevel: LogLevel): void;
 }
 declare namespace bl {
-    const LOGGING_PATH: string;
-    const PROXY_PATH: string;
+    namespace logging {
+        const PATH: string;
+    }
+}
+declare namespace bl {
+    class LoggingApplication extends ApplicationImpl {
+        log(...parms: Serializable[]): void;
+    }
+}
+declare namespace bl {
+    namespace proxy {
+        const PATH: string;
+        enum Type {
+            PROXY_CREATE = 0,
+            PROXY_UPDATE = 1,
+            PROXY_DELETE = 2,
+        }
+        interface ProxyMessage {
+            type: Type;
+            id: number;
+        }
+        type ProxyDelete = ProxyMessage;
+        interface ProxyUpdate extends ProxyMessage {
+            data: Object;
+        }
+        interface ProxyCreate extends ProxyUpdate {
+            key: string;
+        }
+    }
+}
+declare namespace bl {
+    class ProxyApplication extends ApplicationImpl {
+        constructor();
+        createEvent(message: proxy.ProxyCreate): void;
+        updateEvent(message: proxy.ProxyUpdate): void;
+        deleteEvent(message: proxy.ProxyDelete): void;
+        messageEvent(message: proxy.ProxyMessage): void;
+    }
+}
+declare namespace bl {
+    function ProxyStub<T extends (...args: any[]) => Promise<any>>(): T;
+    interface ProxyHandler {
+        (key: string | number | symbol, ...args: any[]): Promise<any>;
+    }
+    function injectHandler<T>(obj: T, handler: ProxyHandler): {
+        proxy: T;
+        revoke: () => void;
+    };
 }
 declare namespace bl {
     namespace network {
@@ -48,43 +103,19 @@ declare namespace bl {
         private extensionId;
         private port;
         private clientId;
-        private messageIdIncrementer;
+        private messageQueue;
         private applications;
         private readyPromise;
         version: string;
         constructor(extensionId?: string);
         sendMessage<T>(path: string, message: Serializable): void;
+        private postMessage(packet);
         private messageListener(rawResponse);
         registerApplication(path: string, application: Application): void;
         ready(): Promise<void>;
         reconnect(): Promise<void>;
         disconnect(): void;
     }
-}
-declare namespace bl {
-    class LoggingApplication implements Application {
-        private client;
-        constructor(client: ClientNetworkHandler);
-        log(...parms: Serializable[]): void;
-        messageEvent(message: Serializable): void;
-    }
-}
-declare namespace bl {
-    class ProxyApplication implements Application {
-        private client;
-        constructor(client: ClientNetworkHandler);
-        messageEvent(message: Serializable): void;
-    }
-}
-declare namespace bl {
-    function ProxyStub<T extends (...args: any[]) => Promise<any>>(): T;
-    interface ProxyHandler {
-        (key: string | number | symbol, ...args: any[]): Promise<any>;
-    }
-    function injectHandler<T>(obj: T, handler: ProxyHandler): {
-        proxy: T;
-        revoke: () => void;
-    };
 }
 declare namespace bl {
     function CreateDefaultClient(extensionId?: string): [ClientNetworkHandler, LoggingApplication, ProxyApplication];

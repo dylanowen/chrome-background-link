@@ -11,10 +11,10 @@ namespace bl {
         private extensionId: string;
         private port: chrome.runtime.Port = null;
         private clientId: number;
-        private messageIdIncrementer: number = 1;
+        private messageQueue: network.Packet[] = [];
 
         private applications: Map<string, Application> = new Map();
-
+        
         private readyPromise: Promise<void> = null;
 
         version: string;
@@ -33,19 +33,23 @@ namespace bl {
         }
 
         sendMessage<T>(path: string, message: Serializable): void {
+            const packet: network.Packet = {
+                path: path,
+                data: message
+            }
+
             if (this.port != null) {
-                const packet: network.Packet = {
-                    path: path,
-                    data: message
-                }
-
-                debug.verbose('Sending Packet: ', packet);
-
-                this.port.postMessage(JSON.stringify(packet));
+                this.postMessage(packet);
             }
             else {
-                throw new Error('implement a message queue');
+                this.messageQueue.push(packet);
             }
+        }
+
+        private postMessage(packet: network.Packet): void {
+            debug.verbose('Sending Packet: ', packet);
+
+            this.port.postMessage(JSON.stringify(packet));
         }
 
         private messageListener(rawResponse: string): void {
@@ -67,6 +71,8 @@ namespace bl {
         }
 
         registerApplication(path: string, application: Application): void {
+            application.setSendMessage(this.sendMessage.bind(this, path));
+
             this.applications.set(path, application);
         }
 
@@ -109,10 +115,15 @@ namespace bl {
                         this.clientId = clientId;
                         this.version = version;
 
-                        //bind the main message listener
+                        // bind the main message listener
                         this.port.onMessage.addListener(this.messageListener.bind(this));
 
                         debug.log('Opened a connection\n Version ' + this.version + '\n Client Id: ' + this.clientId);
+
+                        // send our queued up messages
+                        for (let packet of this.messageQueue) {
+                            this.postMessage(packet);
+                        }
 
                         resolve();
                     }
@@ -122,14 +133,6 @@ namespace bl {
                         reject(errorMessage);
                         debug.error(errorMessage);
                     }
-                    /*
-                #send all the queued messages
-                for obj in @_messageQueue
-                    @sendMessage(obj.message, obj.callback)
-                @_messageQueue = []
-
-                callback(true)
-                    */
                 }
 
                 this.port = chrome.runtime.connect(this.extensionId);
@@ -143,11 +146,10 @@ namespace bl {
                 this.port.disconnect();
             }
 
-            //@_messageQueue = []
-            //@_messageCallbacks = {}
             this.port = null;
             this.clientId = -1;
             this.readyPromise = null;
+            this.messageQueue = [];
         }
     }
 }

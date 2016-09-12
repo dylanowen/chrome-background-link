@@ -4,6 +4,7 @@ var gulp = require('gulp');
 var ts = require('gulp-typescript');
 var watch = require('gulp-watch');
 var file = require('gulp-file');
+var debug = require('gulp-debug');
 var runSequence = require('run-sequence');
 var del = require('del');
 var fs = require('fs');
@@ -32,17 +33,6 @@ var config = {
 gulp.task('clean', function(cb) {
     return del([config.main.buildDest + '*', config.test.buildDest + '*']);
 });
-
-// save our master typescript config to all tsconfig.json files
-gulp.task('setup:typescript', function() {
-    var tsConfig = {
-        compilerOptions: config.ts
-    };
-
-    gulp.src('./**/tsconfig.json')
-        .pipe(file('tsconfig.json', tsConfig))
-        .pipe(gulp.dest('./'));
-})
 
 function typescript(configFolders, outputName, cb) {
     var tsConfig = config.ts;

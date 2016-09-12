@@ -59,11 +59,6 @@ var bl;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    bl.LOGGING_PATH = 'log';
-    bl.PROXY_PATH = 'proxy';
-})(bl || (bl = {}));
-var bl;
-(function (bl) {
     var network;
     (function (network) {
         network.INITIAL_PATH = 'initial';
@@ -84,7 +79,7 @@ var bl;
     class ClientNetworkHandler {
         constructor(extensionId = chrome.runtime.id) {
             this.port = null;
-            this.messageIdIncrementer = 1;
+            this.messageQueue = [];
             this.applications = new Map();
             this.readyPromise = null;
             this.extensionId = extensionId;
@@ -97,17 +92,20 @@ var bl;
             });
         }
         sendMessage(path, message) {
+            const packet = {
+                path: path,
+                data: message
+            };
             if (this.port != null) {
-                const packet = {
-                    path: path,
-                    data: message
-                };
-                bl.debug.verbose('Sending Packet: ', packet);
-                this.port.postMessage(JSON.stringify(packet));
+                this.postMessage(packet);
             }
             else {
-                throw new Error('implement a message queue');
+                this.messageQueue.push(packet);
             }
+        }
+        postMessage(packet) {
+            bl.debug.verbose('Sending Packet: ', packet);
+            this.port.postMessage(JSON.stringify(packet));
         }
         messageListener(rawResponse) {
             try {
@@ -124,6 +122,7 @@ var bl;
             }
         }
         registerApplication(path, application) {
+            application.setSendMessage(this.sendMessage.bind(this, path));
             this.applications.set(path, application);
         }
         ready() {
@@ -157,6 +156,9 @@ var bl;
                         this.version = version;
                         this.port.onMessage.addListener(this.messageListener.bind(this));
                         bl.debug.log('Opened a connection\n Version ' + this.version + '\n Client Id: ' + this.clientId);
+                        for (let packet of this.messageQueue) {
+                            this.postMessage(packet);
+                        }
                         resolve();
                     }
                     catch (e) {
@@ -176,31 +178,86 @@ var bl;
             this.port = null;
             this.clientId = -1;
             this.readyPromise = null;
+            this.messageQueue = [];
         }
     }
     bl.ClientNetworkHandler = ClientNetworkHandler;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    class LoggingApplication {
-        constructor(client) {
-            this.client = client;
+    var logging;
+    (function (logging) {
+        logging.PATH = 'log';
+    })(logging = bl.logging || (bl.logging = {}));
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class ApplicationImpl {
+        setSendMessage(sendMessageFunc) {
+            this.sendMessageFunc = sendMessageFunc;
         }
-        log(...parms) {
-            this.client.sendMessage(bl.LOGGING_PATH, parms);
+        sendMessage(message) {
+            if (this.sendMessageFunc === null) {
+                throw new Error('Attempting to use an unregistered Application');
+            }
+            this.sendMessageFunc(message);
         }
         messageEvent(message) {
+        }
+    }
+    bl.ApplicationImpl = ApplicationImpl;
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class LoggingApplication extends bl.ApplicationImpl {
+        log(...parms) {
+            this.sendMessage(parms);
         }
     }
     bl.LoggingApplication = LoggingApplication;
 })(bl || (bl = {}));
 var bl;
 (function (bl) {
-    class ProxyApplication {
-        constructor(client) {
-            this.client = client;
+    var proxy;
+    (function (proxy) {
+        proxy.PATH = 'proxy';
+        (function (Type) {
+            Type[Type["PROXY_CREATE"] = 0] = "PROXY_CREATE";
+            Type[Type["PROXY_UPDATE"] = 1] = "PROXY_UPDATE";
+            Type[Type["PROXY_DELETE"] = 2] = "PROXY_DELETE";
+        })(proxy.Type || (proxy.Type = {}));
+        var Type = proxy.Type;
+    })(proxy = bl.proxy || (bl.proxy = {}));
+})(bl || (bl = {}));
+var bl;
+(function (bl) {
+    class ProxyApplication extends bl.ApplicationImpl {
+        constructor() {
+            super();
+        }
+        createEvent(message) {
+            bl.debug.verbose('Creating Proxy', message);
+        }
+        updateEvent(message) {
+            bl.debug.verbose('Updating Proxy', message);
+        }
+        deleteEvent(message) {
+            bl.debug.verbose('Deleting Proxy', message);
         }
         messageEvent(message) {
+            switch (message.type) {
+                case bl.proxy.Type.PROXY_CREATE:
+                    this.createEvent(message);
+                    break;
+                case bl.proxy.Type.PROXY_UPDATE:
+                    this.updateEvent(message);
+                    break;
+                case bl.proxy.Type.PROXY_DELETE:
+                    this.deleteEvent(message);
+                    break;
+                default:
+                    throw new Error('Unexpected proxy message type: ' + message.type);
+            }
         }
     }
     bl.ProxyApplication = ProxyApplication;
@@ -209,11 +266,11 @@ var bl;
 (function (bl) {
     function CreateDefaultClient(extensionId = chrome.runtime.id) {
         const client = new bl.ClientNetworkHandler(extensionId);
-        const logging = new bl.LoggingApplication(client);
-        const proxy = new bl.ProxyApplication(client);
-        client.registerApplication(bl.LOGGING_PATH, logging);
-        client.registerApplication(bl.PROXY_PATH, proxy);
-        return [client, logging, proxy];
+        const loggingApplication = new bl.LoggingApplication();
+        const proxyApplication = new bl.ProxyApplication();
+        client.registerApplication(bl.logging.PATH, loggingApplication);
+        client.registerApplication(bl.proxy.PATH, proxyApplication);
+        return [client, loggingApplication, proxyApplication];
     }
     bl.CreateDefaultClient = CreateDefaultClient;
 })(bl || (bl = {}));

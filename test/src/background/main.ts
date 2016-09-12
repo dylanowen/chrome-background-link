@@ -3,7 +3,21 @@
 /// <reference path="../types/TestObject.d.ts"/>
 
 bl.setLogLevel(bl.LogLevel.LOG);
-const network = bl.CreateDefaultServer();
+const [network, proxyApplication] = bl.CreateDefaultServer();
+
+class Test {
+    value: string;
+}
+
+const TestProxy: new() => Test = proxyApplication.registerProxy(Test);
+
+const test = new TestProxy();
+
+let id = 5;
+setInterval(() => {
+    id++;
+    test.value = id + ' new value';
+}, 1000);
 
 /*
 CBL.setLogLevel(CBL.LogLevel.LOG);
