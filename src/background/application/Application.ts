@@ -22,7 +22,7 @@ namespace bl {
             return null;
         }
 
-        // lets applications respond messages
+        // lets applications respond to messages
         messageEvent(message: Serializable): Promise<Serializable> {
             return null;
         }

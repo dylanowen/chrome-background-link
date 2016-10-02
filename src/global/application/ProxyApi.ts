@@ -1,3 +1,5 @@
+/// <reference path="../Global.ts"/>
+
 namespace bl { export namespace proxy {
         export const PATH: string = 'proxy';
 
@@ -5,6 +7,11 @@ namespace bl { export namespace proxy {
             PROXY_CREATE,
             PROXY_UPDATE,
             PROXY_DELETE
+        }
+
+        export interface ProxyDelta {
+            [key: string]: Serializable;
+            [key: number]: Serializable;
         }
 
         export interface ProxyMessage {
@@ -15,7 +22,7 @@ namespace bl { export namespace proxy {
         export type ProxyDelete = ProxyMessage;
 
         export interface ProxyUpdate extends ProxyMessage {
-            data: Object
+            data: ProxyDelta
         }
 
         export interface ProxyCreate extends ProxyUpdate {

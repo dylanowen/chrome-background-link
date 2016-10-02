@@ -13,7 +13,7 @@ namespace bl {
         private proxies: Map<number, ProxyReference> = new Map();
         private proxyId: number = 1;
 
-        registerProxy<T>(key: string | (new (...args: any[]) => T), clazz?: new (...args: any[]) => T): new (...args: any[]) => T {
+        registerProxy<T extends Object>(key: string | (new (...args: any[]) => T), clazz?: new (...args: any[]) => T): new (...args: any[]) => T {
             if (typeof key !== 'string' && !(key instanceof String)) {
                 clazz = <new (...args: any[]) => T>key;
                 key = clazz.name;
@@ -33,7 +33,7 @@ namespace bl {
             this.proxies.set(id, {
                 key: key,
                 obj: realInstance
-            })
+            });
 
             this.broadcast({
                 type: proxy.Type.PROXY_CREATE,
@@ -42,13 +42,11 @@ namespace bl {
                 data: realInstance
             });
             
-            // register this instance as a proxy
-            const proxyInstance = new Proxy(realInstance, {
+            // create a proxy for this instance
+            return new Proxy(realInstance, {
                 set: this.setProxy.bind(this, id),
                 deleteProperty: this.deleteProxy.bind(this, id)
             });
-
-            return proxyInstance;
         }
 
         private setProxy<T>(id: number, target: T, property: ProxyProperty, value: Serializable, receiver: any): boolean {

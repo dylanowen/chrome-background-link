@@ -2,8 +2,10 @@
 
 /// <reference path="../lib/bl-client.d.ts"/>
 
-bl.setLogLevel(bl.LogLevel.VERBOSE);
+bl.setLogLevel(bl.LogLevel.LOG);
 const [network, logger, proxy] = bl.CreateDefaultClient();
+
+const instances: Object[] = [];
 
 function documentReady(): Promise<void> {
     return new Promise<void>((resolve: () => void) => {
@@ -28,11 +30,20 @@ Promise.all<void>([network.ready(), documentReady()])
             objec: 'more',
             complicated: new Date()
         });
+
+        proxy.registerProxy(Test, (createdProxy) => {
+            console.log(createdProxy);
+            instances.push(createdProxy);
+        });
     })
     .catch((error) => {
         console.error('Error initializing: ', error)
     });
 
+class Test {
+    value: string;
+    another: string;
+}
 
 
 /*

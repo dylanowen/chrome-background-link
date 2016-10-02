@@ -1,7 +1,7 @@
 /// <reference path="Application.ts"/>
 
 /*
-A very basic application that logs client side errors
+A very basic application that the client can call to log client side things
 */
 namespace bl {
     export class LoggingApplication extends ApplicationImpl {

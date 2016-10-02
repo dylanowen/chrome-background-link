@@ -312,11 +312,10 @@ var bl;
                 id: id,
                 data: realInstance
             });
-            const proxyInstance = new Proxy(realInstance, {
+            return new Proxy(realInstance, {
                 set: this.setProxy.bind(this, id),
                 deleteProperty: this.deleteProxy.bind(this, id)
             });
-            return proxyInstance;
         }
         setProxy(id, target, property, value, receiver) {
             const delta = {};

@@ -37,13 +37,17 @@ declare namespace bl {
             PROXY_UPDATE = 1,
             PROXY_DELETE = 2,
         }
+        interface ProxyDelta {
+            [key: string]: Serializable;
+            [key: number]: Serializable;
+        }
         interface ProxyMessage {
             type: Type;
             id: number;
         }
         type ProxyDelete = ProxyMessage;
         interface ProxyUpdate extends ProxyMessage {
-            data: Object;
+            data: ProxyDelta;
         }
         interface ProxyCreate extends ProxyUpdate {
             key: string;
@@ -54,7 +58,7 @@ declare namespace bl {
     class ProxyApplication extends ApplicationImpl {
         private proxies;
         private proxyId;
-        registerProxy<T>(key: string | (new (...args: any[]) => T), clazz?: new (...args: any[]) => T): new (...args: any[]) => T;
+        registerProxy<T extends Object>(key: string | (new (...args: any[]) => T), clazz?: new (...args: any[]) => T): new (...args: any[]) => T;
         private constructProxy<T>(key, target, argumentsList, newTarget);
         private setProxy<T>(id, target, property, value, receiver);
         private deleteProxy<T>(id, target, property);

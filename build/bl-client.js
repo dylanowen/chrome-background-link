@@ -232,17 +232,82 @@ var bl;
 var bl;
 (function (bl) {
     class ProxyApplication extends bl.ApplicationImpl {
-        constructor() {
-            super();
+        constructor(...args) {
+            super(...args);
+            this.proxyHandlers = new Map();
+            this.proxiedObjects = new Map();
+            this.delayedProxies = new Map();
+        }
+        registerProxy(key, clazz, callback) {
+            if (typeof key !== 'string' && !(key instanceof String)) {
+                callback = clazz;
+                clazz = key;
+                key = clazz.name;
+            }
+            const proxyCreatedRef = {
+                clazz: clazz,
+                callback: callback
+            };
+            this.proxyHandlers.set(key, proxyCreatedRef);
+            for (let delayedProxy of this.delayedProxies.values()) {
+                const createMessage = delayedProxy[0];
+                if (createMessage.key === key) {
+                    const instance = this.setupProxy(createMessage, proxyCreatedRef);
+                    for (let i = 0; i < delayedProxy.length; i++) {
+                        const updateMessage = delayedProxy[i];
+                        this.applyProxyDelta(instance, updateMessage.data);
+                    }
+                }
+            }
         }
         createEvent(message) {
             bl.debug.verbose('Creating Proxy', message);
+            const key = message.key;
+            if (this.proxyHandlers.has(key)) {
+                this.setupProxy(message, this.proxyHandlers.get(key));
+            }
+            else {
+                this.delayedProxies.set(message.id, [message]);
+            }
         }
         updateEvent(message) {
             bl.debug.verbose('Updating Proxy', message);
+            const id = message.id;
+            if (this.proxiedObjects.has(id)) {
+                this.applyProxyDelta(this.proxiedObjects.get(id), message.data);
+            }
+            else if (this.delayedProxies.has(id)) {
+                const delayedProxy = this.delayedProxies.get(id);
+                delayedProxy.push(message);
+            }
+            else {
+                throw new Error('Couldn\'t find instance to update: ' + id);
+            }
         }
         deleteEvent(message) {
             bl.debug.verbose('Deleting Proxy', message);
+            const id = message.id;
+            if (this.proxiedObjects.has(id)) {
+                this.proxiedObjects.delete(id);
+            }
+            else if (this.delayedProxies.has(id)) {
+                this.delayedProxies.delete(id);
+            }
+            else {
+                throw new Error('Couldn\'t find instance to delete: ' + id);
+            }
+        }
+        setupProxy(message, proxyCreatedRef) {
+            const instance = new proxyCreatedRef.clazz();
+            this.proxiedObjects.set(message.id, instance);
+            this.applyProxyDelta(instance, message.data);
+            proxyCreatedRef.callback(instance);
+            return instance;
+        }
+        applyProxyDelta(proxiedInstance, delta) {
+            for (let key in delta) {
+                Reflect.set(proxiedInstance, key, delta[key]);
+            }
         }
         messageEvent(message) {
             switch (message.type) {

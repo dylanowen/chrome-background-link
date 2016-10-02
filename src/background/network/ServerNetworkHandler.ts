@@ -44,7 +44,7 @@ namespace bl {
                     debug.error('Missed internal error: ' + e);
 
                     throw new Error(e);
-                })
+                });
             }
         }
 

@@ -50,13 +50,17 @@ declare namespace bl {
             PROXY_UPDATE = 1,
             PROXY_DELETE = 2,
         }
+        interface ProxyDelta {
+            [key: string]: Serializable;
+            [key: number]: Serializable;
+        }
         interface ProxyMessage {
             type: Type;
             id: number;
         }
         type ProxyDelete = ProxyMessage;
         interface ProxyUpdate extends ProxyMessage {
-            data: Object;
+            data: ProxyDelta;
         }
         interface ProxyCreate extends ProxyUpdate {
             key: string;
@@ -64,11 +68,19 @@ declare namespace bl {
     }
 }
 declare namespace bl {
+    interface ProxyCreatedCallback {
+        (createdProxy: Object): void;
+    }
     class ProxyApplication extends ApplicationImpl {
-        constructor();
-        createEvent(message: proxy.ProxyCreate): void;
-        updateEvent(message: proxy.ProxyUpdate): void;
-        deleteEvent(message: proxy.ProxyDelete): void;
+        private proxyHandlers;
+        private proxiedObjects;
+        private delayedProxies;
+        registerProxy(key: string | (new () => Object), clazz: (new () => Object) | ProxyCreatedCallback, callback?: ProxyCreatedCallback): void;
+        private createEvent(message);
+        private updateEvent(message);
+        private deleteEvent(message);
+        private setupProxy(message, proxyCreatedRef);
+        private applyProxyDelta(proxiedInstance, delta);
         messageEvent(message: proxy.ProxyMessage): void;
     }
 }
